@@ -132,6 +132,10 @@ pub struct AppState {
     /// Whether the account removal modal is showing
     pub show_remove_modal: bool,
 
+    // === Help ===
+    /// Whether the help modal is showing
+    pub show_help_modal: bool,
+
     // === Settings ===
     /// Current settings tab
     pub settings_tab: SettingsTab,
@@ -210,6 +214,9 @@ impl AppState {
             polling_device_flow: false,
             removing_account: None,
             show_remove_modal: false,
+
+            // Help
+            show_help_modal: false,
 
             // Settings
             settings_tab: SettingsTab::default(),

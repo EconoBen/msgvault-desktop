@@ -777,6 +777,17 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Help ===
+        Message::ShowHelp => {
+            state.show_help_modal = true;
+            Task::none()
+        }
+
+        Message::HideHelp => {
+            state.show_help_modal = false;
+            Task::none()
+        }
+
         // === Selection ===
         Message::ToggleSelection => {
             // Toggle selection based on current view
@@ -1106,10 +1117,13 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             Task::none()
         }
 
-        // ? - help (will be implemented later)
+        // ? - help
         Key::Character(ref c) if c == "?" => {
-            // TODO: Show help modal
-            Task::none()
+            if state.show_help_modal {
+                Task::done(Message::HideHelp)
+            } else {
+                Task::done(Message::ShowHelp)
+            }
         }
 
         // Space - toggle selection (messages/search)

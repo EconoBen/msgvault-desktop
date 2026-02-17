@@ -123,6 +123,12 @@ pub enum Message {
     /// Account removed response
     AccountRemoved(Result<RemoveAccountResponse, AppError>),
 
+    // === Help ===
+    /// Show keyboard shortcuts help
+    ShowHelp,
+    /// Hide help modal
+    HideHelp,
+
     // === Settings ===
     /// Open settings view
     OpenSettings,

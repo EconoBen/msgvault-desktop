@@ -117,8 +117,10 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
         .height(Length::Fill)
         .into();
 
-    // Overlay delete modal if showing
-    if state.show_delete_modal {
+    // Overlay modals if showing
+    if state.show_help_modal {
+        stack![main_view, help_modal()].into()
+    } else if state.show_delete_modal {
         stack![
             main_view,
             delete_confirmation_modal(state.selected_messages.len())
@@ -126,6 +128,113 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
         .into()
     } else {
         main_view
+    }
+}
+
+/// Keyboard shortcuts help modal
+fn help_modal() -> Element<'static, Message> {
+    // Semi-transparent backdrop
+    let backdrop = container(Space::new(Length::Fill, Length::Fill))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme: &Theme| container::Style {
+            background: Some(iced::Background::Color(iced::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.5,
+            })),
+            ..Default::default()
+        });
+
+    // Help content
+    let title = text("Keyboard Shortcuts").size(20);
+
+    let shortcuts = column![
+        shortcut_row("Navigation", ""),
+        shortcut_row("  j / ↓", "Move down"),
+        shortcut_row("  k / ↑", "Move up"),
+        shortcut_row("  Enter", "Open / Drill down"),
+        shortcut_row("  Esc", "Go back"),
+        shortcut_row("  Tab", "Cycle view types"),
+        Space::with_height(10),
+        shortcut_row("Views", ""),
+        shortcut_row("  /", "Search"),
+        shortcut_row("  y", "Sync status"),
+        shortcut_row("  a", "Accounts"),
+        shortcut_row("  ,", "Settings"),
+        Space::with_height(10),
+        shortcut_row("Actions", ""),
+        shortcut_row("  Space", "Toggle selection"),
+        shortcut_row("  Shift+A", "Select all"),
+        shortcut_row("  x", "Clear selection"),
+        shortcut_row("  d", "Delete selected"),
+        shortcut_row("  s", "Toggle sort field"),
+        shortcut_row("  r", "Reverse sort"),
+        Space::with_height(10),
+        shortcut_row("Messages", ""),
+        shortcut_row("  n", "Next page"),
+        shortcut_row("  p", "Previous page"),
+        shortcut_row("  ← / →", "Prev/next message"),
+        Space::with_height(10),
+        shortcut_row("General", ""),
+        shortcut_row("  ?", "Toggle this help"),
+    ]
+    .spacing(3);
+
+    let close_button = button(text("Close").size(14))
+        .padding([8, 16])
+        .on_press(Message::HideHelp);
+
+    let dialog_content = column![
+        title,
+        Space::with_height(15),
+        shortcuts,
+        Space::with_height(20),
+        close_button,
+    ]
+    .spacing(5)
+    .padding(25)
+    .align_x(iced::Alignment::Start);
+
+    let dialog = container(dialog_content)
+        .style(|theme: &Theme| {
+            let palette = theme.palette();
+            container::Style {
+                background: Some(iced::Background::Color(palette.background)),
+                border: iced::Border {
+                    radius: 8.0.into(),
+                    width: 1.0,
+                    color: iced::Color {
+                        a: 0.3,
+                        ..palette.text
+                    },
+                },
+                ..Default::default()
+            }
+        })
+        .padding(10);
+
+    stack![backdrop, center(dialog)].into()
+}
+
+/// Single shortcut row
+fn shortcut_row<'a>(key: &'a str, description: &'a str) -> Element<'a, Message> {
+    if description.is_empty() {
+        // Section header
+        text(key).size(14).style(|theme: &Theme| {
+            let palette = theme.palette();
+            iced::widget::text::Style {
+                color: Some(palette.primary),
+            }
+        }).into()
+    } else {
+        row![
+            text(key).size(12).width(Length::Fixed(100.0)),
+            text(description).size(12),
+        ]
+        .spacing(10)
+        .into()
     }
 }
 
