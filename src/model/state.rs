@@ -3,7 +3,9 @@
 //! The Model in the MVU (Model-View-Update) pattern.
 //! Contains all application state that determines what to render.
 
-use crate::api::types::{AggregateRow, SortDirection, SortField, StatsResponse};
+use crate::api::types::{
+    AggregateRow, MessageDetail, MessageSummary, SortDirection, SortField, StatsResponse,
+};
 use crate::config::Settings;
 use crate::model::navigation::NavigationStack;
 
@@ -67,6 +69,24 @@ pub struct AppState {
     pub sort_field: SortField,
     /// Current sort direction
     pub sort_dir: SortDirection,
+
+    // === Messages ===
+    /// Current message list
+    pub messages: Vec<MessageSummary>,
+    /// Selected message index in list
+    pub message_selected_index: usize,
+    /// Current message detail (when viewing single message)
+    pub current_message: Option<MessageDetail>,
+    /// Pagination offset
+    pub messages_offset: i64,
+    /// Total messages matching filter
+    pub messages_total: i64,
+    /// Messages per page
+    pub messages_limit: i64,
+    /// Current filter type (sender, domain, label, etc.)
+    pub filter_type: String,
+    /// Current filter value
+    pub filter_value: String,
 }
 
 impl AppState {
@@ -91,6 +111,16 @@ impl AppState {
             selected_index: 0,
             sort_field: SortField::Count,
             sort_dir: SortDirection::Desc,
+
+            // Messages
+            messages: Vec::new(),
+            message_selected_index: 0,
+            current_message: None,
+            messages_offset: 0,
+            messages_total: 0,
+            messages_limit: 50,
+            filter_type: String::new(),
+            filter_value: String::new(),
         }
     }
 

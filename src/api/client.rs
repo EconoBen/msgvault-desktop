@@ -3,7 +3,8 @@
 //! Handles all HTTP communication with the msgvault server.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, SortDirection, SortField, StatsResponse, ViewType,
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SortDirection,
+    SortField, StatsResponse, ViewType,
 };
 use crate::error::AppError;
 use reqwest::Client;
@@ -121,6 +122,66 @@ impl ApiClient {
             })?;
 
         Ok(aggregates)
+    }
+
+    /// Fetch filtered messages
+    ///
+    /// Returns paginated messages matching the specified filter criteria.
+    pub async fn messages_filter(
+        &self,
+        filter_type: &str,
+        filter_value: &str,
+        offset: i64,
+        limit: i64,
+    ) -> Result<MessageListResponse, AppError> {
+        let response = self
+            .request(reqwest::Method::GET, "/api/v1/messages/filter")
+            .query(&[
+                ("type", filter_type),
+                ("value", filter_value),
+                ("offset", &offset.to_string()),
+                ("limit", &limit.to_string()),
+            ])
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let messages: MessageListResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid messages response: {}", e),
+            })?;
+
+        Ok(messages)
+    }
+
+    /// Fetch message detail
+    ///
+    /// Returns full details for a single message by ID.
+    pub async fn message_detail(&self, message_id: i64) -> Result<MessageDetail, AppError> {
+        let path = format!("/api/v1/messages/{}", message_id);
+
+        let response = self.request(reqwest::Method::GET, &path).send().await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let detail: MessageDetail = response.json().await.map_err(|e| AppError::ApiError {
+            status: 0,
+            message: format!("Invalid message detail response: {}", e),
+        })?;
+
+        Ok(detail)
     }
 }
 

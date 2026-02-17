@@ -3,7 +3,9 @@
 //! All user interactions and async events are represented as Messages.
 //! The update function processes these to modify application state.
 
-use crate::api::types::{AggregateResponse, HealthResponse, StatsResponse, ViewType};
+use crate::api::types::{
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, StatsResponse, ViewType,
+};
 use crate::error::AppError;
 use crate::model::ViewLevel;
 
@@ -39,6 +41,29 @@ pub enum Message {
     ToggleSortField,
     /// Toggle sort direction
     ToggleSortDirection,
+
+    // === Messages ===
+    /// Fetch messages with filter
+    FetchMessages {
+        filter_type: String,
+        filter_value: String,
+    },
+    /// Messages loaded
+    MessagesLoaded(Result<MessageListResponse, AppError>),
+    /// Select a message in the list
+    SelectMessage(usize),
+    /// Open the selected message (view detail)
+    OpenMessage,
+    /// Message detail loaded
+    MessageDetailLoaded(Result<MessageDetail, AppError>),
+    /// Go to next page of messages
+    NextPage,
+    /// Go to previous page of messages
+    PreviousPage,
+    /// Navigate to previous message in list
+    PreviousMessage,
+    /// Navigate to next message in list
+    NextMessage,
 
     // === Navigation ===
     /// Navigate to a specific view

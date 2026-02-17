@@ -5,9 +5,13 @@
 
 pub mod aggregates;
 pub mod dashboard;
+pub mod message_detail;
+pub mod messages;
 pub mod widgets;
 
 pub use aggregates::aggregates_view;
+pub use message_detail::message_detail_view;
+pub use messages::messages_view;
 
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
@@ -178,28 +182,22 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
             .into()
         }
         ViewLevel::Messages { filter_description } => {
-            // Placeholder for Phase 4
-            center(
-                column![
-                    text(format!("Messages: {}", filter_description)).size(20),
-                    Space::with_height(10),
-                    text("Coming in Phase 4...").size(14),
-                ]
-                .align_x(iced::Alignment::Center),
+            // Show message list view
+            messages_view(
+                filter_description,
+                &state.messages,
+                state.message_selected_index,
+                state.messages_offset,
+                state.messages_total,
             )
-            .into()
         }
-        ViewLevel::MessageDetail { message_id } => {
-            // Placeholder for Phase 4
-            center(
-                column![
-                    text(format!("Message #{}", message_id)).size(20),
-                    Space::with_height(10),
-                    text("Coming in Phase 4...").size(14),
-                ]
-                .align_x(iced::Alignment::Center),
-            )
-            .into()
+        ViewLevel::MessageDetail { .. } => {
+            // Show message detail view
+            if let Some(detail) = &state.current_message {
+                message_detail_view(detail)
+            } else {
+                loading("Loading message...")
+            }
         }
     }
 }

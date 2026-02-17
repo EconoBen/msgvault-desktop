@@ -141,9 +141,18 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             if let Some(agg) = state.aggregates.get(state.selected_index) {
                 if let ViewLevel::Aggregates { view_type } = state.navigation.current().clone() {
                     // Navigate to messages filtered by this aggregate
-                    let filter = format!("{}: {}", view_type.display_name(), &agg.key);
+                    let filter_desc = format!("{}: {}", view_type.display_name(), &agg.key);
+                    let filter_type = view_type.as_str().to_string();
+                    let filter_value = agg.key.clone();
+
+                    state.messages_offset = 0;
                     state.navigation.push(ViewLevel::Messages {
-                        filter_description: filter,
+                        filter_description: filter_desc,
+                    });
+
+                    return Task::done(Message::FetchMessages {
+                        filter_type,
+                        filter_value,
                     });
                 }
             }
@@ -172,6 +181,136 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             // Refetch with new sort
             if let ViewLevel::Aggregates { view_type } = state.navigation.current().clone() {
                 return Task::done(Message::FetchAggregates(view_type));
+            }
+            Task::none()
+        }
+
+        // === Messages ===
+        Message::FetchMessages {
+            filter_type,
+            filter_value,
+        } => {
+            state.loading = LoadingState::Loading;
+            state.message_selected_index = 0;
+            state.filter_type = filter_type.clone();
+            state.filter_value = filter_value.clone();
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+            let offset = state.messages_offset;
+            let limit = state.messages_limit;
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client
+                        .messages_filter(&filter_type, &filter_value, offset, limit)
+                        .await
+                },
+                Message::MessagesLoaded,
+            )
+        }
+
+        Message::MessagesLoaded(result) => {
+            match result {
+                Ok(response) => {
+                    state.messages = response.messages;
+                    state.messages_total = response.total;
+                    state.loading = LoadingState::Idle;
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::SelectMessage(index) => {
+            if index < state.messages.len() {
+                state.message_selected_index = index;
+            }
+            Task::none()
+        }
+
+        Message::OpenMessage => {
+            if let Some(msg) = state.messages.get(state.message_selected_index) {
+                let message_id = msg.id;
+                state.loading = LoadingState::Loading;
+
+                // Navigate to detail view
+                state.navigation.push(ViewLevel::MessageDetail { message_id });
+
+                let url = state.server_url.clone();
+                let api_key = if state.api_key.is_empty() {
+                    None
+                } else {
+                    Some(state.api_key.clone())
+                };
+
+                return Task::perform(
+                    async move {
+                        let client = ApiClient::new(url, api_key);
+                        client.message_detail(message_id).await
+                    },
+                    Message::MessageDetailLoaded,
+                );
+            }
+            Task::none()
+        }
+
+        Message::MessageDetailLoaded(result) => {
+            match result {
+                Ok(detail) => {
+                    state.current_message = Some(detail);
+                    state.loading = LoadingState::Idle;
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::NextPage => {
+            let new_offset = state.messages_offset + state.messages_limit;
+            if new_offset < state.messages_total {
+                state.messages_offset = new_offset;
+                return Task::done(Message::FetchMessages {
+                    filter_type: state.filter_type.clone(),
+                    filter_value: state.filter_value.clone(),
+                });
+            }
+            Task::none()
+        }
+
+        Message::PreviousPage => {
+            if state.messages_offset > 0 {
+                state.messages_offset =
+                    (state.messages_offset - state.messages_limit).max(0);
+                return Task::done(Message::FetchMessages {
+                    filter_type: state.filter_type.clone(),
+                    filter_value: state.filter_value.clone(),
+                });
+            }
+            Task::none()
+        }
+
+        Message::PreviousMessage => {
+            if state.message_selected_index > 0 {
+                state.message_selected_index -= 1;
+                return Task::done(Message::OpenMessage);
+            }
+            Task::none()
+        }
+
+        Message::NextMessage => {
+            if state.message_selected_index + 1 < state.messages.len() {
+                state.message_selected_index += 1;
+                return Task::done(Message::OpenMessage);
             }
             Task::none()
         }
@@ -260,8 +399,10 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         return Task::none();
     }
 
-    // Check if we're in an aggregate view for list navigation
+    // Determine current view type
     let in_aggregates = matches!(state.navigation.current(), ViewLevel::Aggregates { .. });
+    let in_messages = matches!(state.navigation.current(), ViewLevel::Messages { .. });
+    let in_detail = matches!(state.navigation.current(), ViewLevel::MessageDetail { .. });
 
     match key {
         // Escape - go back
@@ -273,19 +414,25 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             }
         }
 
-        // Tab - cycle view types
+        // Tab - cycle view types (only in aggregates)
         Key::Named(iced::keyboard::key::Named::Tab) => {
-            if modifiers.shift() {
-                Task::done(Message::PreviousViewType)
+            if in_aggregates {
+                if modifiers.shift() {
+                    Task::done(Message::PreviousViewType)
+                } else {
+                    Task::done(Message::NextViewType)
+                }
             } else {
-                Task::done(Message::NextViewType)
+                Task::none()
             }
         }
 
-        // Enter - drill down into selected aggregate
+        // Enter - drill down or open message
         Key::Named(iced::keyboard::key::Named::Enter) => {
             if in_aggregates {
                 Task::done(Message::DrillDown)
+            } else if in_messages {
+                Task::done(Message::OpenMessage)
             } else {
                 Task::none()
             }
@@ -295,6 +442,10 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         Key::Named(iced::keyboard::key::Named::ArrowUp) => {
             if in_aggregates {
                 Task::done(Message::SelectPrevious)
+            } else if in_messages {
+                Task::done(Message::SelectMessage(
+                    state.message_selected_index.saturating_sub(1),
+                ))
             } else {
                 Task::none()
             }
@@ -303,6 +454,26 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         Key::Named(iced::keyboard::key::Named::ArrowDown) => {
             if in_aggregates {
                 Task::done(Message::SelectNext)
+            } else if in_messages {
+                let next = (state.message_selected_index + 1).min(state.messages.len().saturating_sub(1));
+                Task::done(Message::SelectMessage(next))
+            } else {
+                Task::none()
+            }
+        }
+
+        // Left/Right - prev/next message in detail view
+        Key::Named(iced::keyboard::key::Named::ArrowLeft) => {
+            if in_detail {
+                Task::done(Message::PreviousMessage)
+            } else {
+                Task::none()
+            }
+        }
+
+        Key::Named(iced::keyboard::key::Named::ArrowRight) => {
+            if in_detail {
+                Task::done(Message::NextMessage)
             } else {
                 Task::none()
             }
@@ -312,6 +483,9 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         Key::Character(ref c) if c == "j" && !modifiers.shift() => {
             if in_aggregates {
                 Task::done(Message::SelectNext)
+            } else if in_messages {
+                let next = (state.message_selected_index + 1).min(state.messages.len().saturating_sub(1));
+                Task::done(Message::SelectMessage(next))
             } else {
                 Task::none()
             }
@@ -320,12 +494,33 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         Key::Character(ref c) if c == "k" && !modifiers.shift() => {
             if in_aggregates {
                 Task::done(Message::SelectPrevious)
+            } else if in_messages {
+                Task::done(Message::SelectMessage(
+                    state.message_selected_index.saturating_sub(1),
+                ))
             } else {
                 Task::none()
             }
         }
 
-        // s - toggle sort field
+        // n/p - next/prev page in messages
+        Key::Character(ref c) if c == "n" && !modifiers.shift() => {
+            if in_messages {
+                Task::done(Message::NextPage)
+            } else {
+                Task::none()
+            }
+        }
+
+        Key::Character(ref c) if c == "p" && !modifiers.shift() => {
+            if in_messages {
+                Task::done(Message::PreviousPage)
+            } else {
+                Task::none()
+            }
+        }
+
+        // s - toggle sort field (aggregates only)
         Key::Character(ref c) if c == "s" && !modifiers.shift() => {
             if in_aggregates {
                 Task::done(Message::ToggleSortField)
@@ -334,7 +529,7 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             }
         }
 
-        // r - toggle sort direction (reverse)
+        // r - toggle sort direction (aggregates only)
         Key::Character(ref c) if c == "r" && !modifiers.shift() => {
             if in_aggregates {
                 Task::done(Message::ToggleSortDirection)
