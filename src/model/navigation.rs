@@ -40,6 +40,9 @@ pub enum ViewLevel {
 
     /// Account management view
     Accounts,
+
+    /// Settings view
+    Settings,
 }
 
 impl ViewLevel {
@@ -58,6 +61,7 @@ impl ViewLevel {
             ViewLevel::Search => "Search".to_string(),
             ViewLevel::Sync => "Sync Status".to_string(),
             ViewLevel::Accounts => "Accounts".to_string(),
+            ViewLevel::Settings => "Settings".to_string(),
         }
     }
 

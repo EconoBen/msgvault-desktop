@@ -5,8 +5,9 @@
 
 use crate::api::types::{DeviceFlowState, SortDirection, SortField};
 use crate::api::ApiClient;
+use crate::config::Settings;
 use crate::message::Message;
-use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
+use crate::model::{AppState, ConnectionStatus, LoadingState, SettingsTab, ViewLevel};
 use iced::keyboard::{Key, Modifiers};
 use iced::Task;
 
@@ -691,6 +692,91 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Settings ===
+        Message::OpenSettings => {
+            // Copy current values to editable fields
+            state.settings_server_url = state.server_url.clone();
+            state.settings_api_key = state.api_key.clone();
+            state.settings_tab = SettingsTab::Server;
+            state.connection_test_result = None;
+            state.navigation.push(ViewLevel::Settings);
+            Task::none()
+        }
+
+        Message::SwitchSettingsTab(tab) => {
+            state.settings_tab = tab;
+            Task::none()
+        }
+
+        Message::SettingsServerUrlChanged(url) => {
+            state.settings_server_url = url;
+            state.connection_test_result = None; // Clear previous test result
+            Task::none()
+        }
+
+        Message::SettingsApiKeyChanged(key) => {
+            state.settings_api_key = key;
+            state.connection_test_result = None;
+            Task::none()
+        }
+
+        Message::TestConnection => {
+            state.testing_connection = true;
+            state.connection_test_result = None;
+
+            let url = state.settings_server_url.clone();
+            let api_key = if state.settings_api_key.is_empty() {
+                None
+            } else {
+                Some(state.settings_api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.health().await
+                },
+                Message::ConnectionTested,
+            )
+        }
+
+        Message::ConnectionTested(result) => {
+            state.testing_connection = false;
+            state.connection_test_result = Some(result.map(|_| ()).map_err(|e| e.to_string()));
+            Task::none()
+        }
+
+        Message::SaveSettings => {
+            // Update the app state with new values
+            state.server_url = state.settings_server_url.clone();
+            state.api_key = state.settings_api_key.clone();
+
+            // Save to config file
+            let settings = Settings {
+                server_url: state.server_url.clone(),
+                api_key: state.api_key.clone(),
+                allow_insecure: true, // Allow HTTP for local development
+            };
+
+            Task::perform(
+                async move { settings.save() },
+                Message::SettingsSaved,
+            )
+        }
+
+        Message::SettingsSaved(result) => {
+            match result {
+                Ok(_) => {
+                    // Go back to previous view
+                    state.navigation.pop();
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(format!("Failed to save settings: {}", e));
+                }
+            }
+            Task::none()
+        }
+
         // === Selection ===
         Message::ToggleSelection => {
             // Toggle selection based on current view
@@ -1066,6 +1152,11 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         // a - open accounts view
         Key::Character(ref c) if c == "a" && !modifiers.shift() => {
             Task::done(Message::OpenAccounts)
+        }
+
+        // comma - open settings (standard macOS shortcut)
+        Key::Character(ref c) if c == "," => {
+            Task::done(Message::OpenSettings)
         }
 
         _ => Task::none(),

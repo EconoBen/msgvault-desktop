@@ -9,6 +9,7 @@ pub mod dashboard;
 pub mod message_detail;
 pub mod messages;
 pub mod search;
+pub mod settings;
 pub mod sync;
 pub mod widgets;
 
@@ -17,6 +18,7 @@ pub use aggregates::aggregates_view;
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
 pub use search::search_view;
+pub use settings::settings_view;
 pub use sync::sync_view;
 
 use crate::message::Message;
@@ -331,6 +333,16 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
                 state.oauth_response.as_ref(),
                 state.show_remove_modal,
                 state.removing_account.as_deref(),
+            )
+        }
+        ViewLevel::Settings => {
+            // Show settings view
+            settings_view(
+                state.settings_tab,
+                &state.settings_server_url,
+                &state.settings_api_key,
+                state.testing_connection,
+                state.connection_test_result.as_ref(),
             )
         }
     }

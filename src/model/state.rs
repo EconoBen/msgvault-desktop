@@ -131,6 +131,26 @@ pub struct AppState {
     pub removing_account: Option<String>,
     /// Whether the account removal modal is showing
     pub show_remove_modal: bool,
+
+    // === Settings ===
+    /// Current settings tab
+    pub settings_tab: SettingsTab,
+    /// Settings form: server URL (editable copy)
+    pub settings_server_url: String,
+    /// Settings form: API key (editable copy)
+    pub settings_api_key: String,
+    /// Whether testing connection
+    pub testing_connection: bool,
+    /// Connection test result
+    pub connection_test_result: Option<Result<(), String>>,
+}
+
+/// Settings tabs
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SettingsTab {
+    #[default]
+    Server,
+    Display,
 }
 
 impl AppState {
@@ -190,6 +210,13 @@ impl AppState {
             polling_device_flow: false,
             removing_account: None,
             show_remove_modal: false,
+
+            // Settings
+            settings_tab: SettingsTab::default(),
+            settings_server_url: settings.server_url.clone(),
+            settings_api_key: settings.api_key.clone(),
+            testing_connection: false,
+            connection_test_result: None,
         }
     }
 

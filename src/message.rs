@@ -9,7 +9,7 @@ use crate::api::types::{
     SyncTriggerResponse, ViewType,
 };
 use crate::error::AppError;
-use crate::model::ViewLevel;
+use crate::model::{SettingsTab, ViewLevel};
 
 /// All possible messages in the application
 #[derive(Debug, Clone)]
@@ -122,6 +122,24 @@ pub enum Message {
     ConfirmRemoveAccount,
     /// Account removed response
     AccountRemoved(Result<RemoveAccountResponse, AppError>),
+
+    // === Settings ===
+    /// Open settings view
+    OpenSettings,
+    /// Switch settings tab
+    SwitchSettingsTab(SettingsTab),
+    /// Settings server URL changed
+    SettingsServerUrlChanged(String),
+    /// Settings API key changed
+    SettingsApiKeyChanged(String),
+    /// Test connection
+    TestConnection,
+    /// Connection test result
+    ConnectionTested(Result<HealthResponse, AppError>),
+    /// Save settings
+    SaveSettings,
+    /// Settings saved
+    SettingsSaved(Result<(), String>),
 
     // === Selection ===
     /// Toggle selection of current message (Space key)
