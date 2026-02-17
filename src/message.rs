@@ -4,8 +4,9 @@
 //! The update function processes these to modify application state.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SchedulerStatus,
-    SearchResponse, StatsResponse, SyncTriggerResponse, ViewType,
+    AggregateResponse, DeviceFlowStatus, HealthResponse, MessageDetail, MessageListResponse,
+    OAuthInitResponse, RemoveAccountResponse, SchedulerStatus, SearchResponse, StatsResponse,
+    SyncTriggerResponse, ViewType,
 };
 use crate::error::AppError;
 use crate::model::ViewLevel;
@@ -95,6 +96,32 @@ pub enum Message {
     SyncTriggered(Result<SyncTriggerResponse, AppError>),
     /// Refresh sync status (polling)
     RefreshSyncStatus,
+
+    // === Account Management ===
+    /// Open accounts view
+    OpenAccounts,
+    /// Email input changed for add account
+    AddAccountEmailChanged(String),
+    /// Start add account flow (initiate OAuth)
+    StartAddAccount,
+    /// OAuth initiation response
+    OAuthInitiated(Result<OAuthInitResponse, AppError>),
+    /// Open browser for OAuth
+    OpenOAuthBrowser(String),
+    /// Poll device flow status
+    PollDeviceFlow,
+    /// Device flow status received
+    DeviceFlowStatusReceived(Result<DeviceFlowStatus, AppError>),
+    /// Cancel add account flow
+    CancelAddAccount,
+    /// Show remove account confirmation
+    ShowRemoveAccountModal(String),
+    /// Hide remove account modal
+    HideRemoveAccountModal,
+    /// Confirm remove account
+    ConfirmRemoveAccount,
+    /// Account removed response
+    AccountRemoved(Result<RemoveAccountResponse, AppError>),
 
     // === Selection ===
     /// Toggle selection of current message (Space key)

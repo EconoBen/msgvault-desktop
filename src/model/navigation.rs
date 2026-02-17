@@ -37,6 +37,9 @@ pub enum ViewLevel {
 
     /// Sync status view
     Sync,
+
+    /// Account management view
+    Accounts,
 }
 
 impl ViewLevel {
@@ -54,6 +57,7 @@ impl ViewLevel {
             ViewLevel::MessageDetail { message_id } => format!("Message #{}", message_id),
             ViewLevel::Search => "Search".to_string(),
             ViewLevel::Sync => "Sync Status".to_string(),
+            ViewLevel::Accounts => "Accounts".to_string(),
         }
     }
 

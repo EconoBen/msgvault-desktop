@@ -184,6 +184,49 @@ pub struct SyncTriggerResponse {
     pub message: String,
 }
 
+/// Response from initiating OAuth flow
+#[derive(Debug, Clone, Deserialize)]
+pub struct OAuthInitResponse {
+    /// URL to open in browser for OAuth
+    pub auth_url: String,
+    /// Whether this is a device flow (show code instead of browser)
+    #[serde(default)]
+    pub device_flow: bool,
+    /// User code for device flow
+    #[serde(default)]
+    pub user_code: Option<String>,
+    /// Verification URL for device flow
+    #[serde(default)]
+    pub verification_url: Option<String>,
+    /// Interval to poll for device flow completion (seconds)
+    #[serde(default)]
+    pub poll_interval: Option<i32>,
+}
+
+/// Device flow status
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeviceFlowStatus {
+    pub status: DeviceFlowState,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+/// Device flow states
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeviceFlowState {
+    Pending,
+    Complete,
+    Expired,
+    Error,
+}
+
+/// Response from removing an account
+#[derive(Debug, Clone, Deserialize)]
+pub struct RemoveAccountResponse {
+    pub message: String,
+}
+
 /// View types for aggregation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

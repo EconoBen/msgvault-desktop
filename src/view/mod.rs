@@ -3,6 +3,7 @@
 //! The View in the MVU pattern.
 //! Renders the UI based on current application state.
 
+pub mod accounts;
 pub mod aggregates;
 pub mod dashboard;
 pub mod message_detail;
@@ -11,6 +12,7 @@ pub mod search;
 pub mod sync;
 pub mod widgets;
 
+pub use accounts::accounts_view;
 pub use aggregates::aggregates_view;
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
@@ -317,6 +319,18 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
                 &state.sync_accounts,
                 state.sync_loading,
                 state.syncing_account.as_deref(),
+            )
+        }
+        ViewLevel::Accounts => {
+            // Show accounts management view
+            accounts_view(
+                &state.sync_accounts,
+                state.sync_loading,
+                &state.add_account_email,
+                state.adding_account,
+                state.oauth_response.as_ref(),
+                state.show_remove_modal,
+                state.removing_account.as_deref(),
             )
         }
     }

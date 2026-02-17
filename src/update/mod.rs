@@ -3,7 +3,7 @@
 //! The Update in the MVU pattern.
 //! Processes Messages and returns Commands for async operations.
 
-use crate::api::types::{SortDirection, SortField};
+use crate::api::types::{DeviceFlowState, SortDirection, SortField};
 use crate::api::ApiClient;
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
@@ -501,6 +501,196 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Account Management ===
+        Message::OpenAccounts => {
+            state.navigation.push(ViewLevel::Accounts);
+            // Reset add account state
+            state.add_account_email.clear();
+            state.adding_account = false;
+            state.oauth_response = None;
+            // Fetch current account list (using scheduler status)
+            Task::done(Message::FetchSyncStatus)
+        }
+
+        Message::AddAccountEmailChanged(email) => {
+            state.add_account_email = email;
+            Task::none()
+        }
+
+        Message::StartAddAccount => {
+            if state.add_account_email.is_empty() {
+                return Task::none();
+            }
+
+            state.adding_account = true;
+            let email = state.add_account_email.clone();
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.initiate_oauth(&email).await
+                },
+                Message::OAuthInitiated,
+            )
+        }
+
+        Message::OAuthInitiated(result) => {
+            match result {
+                Ok(response) => {
+                    state.oauth_response = Some(response.clone());
+                    if response.device_flow {
+                        // Start polling for device flow completion
+                        state.polling_device_flow = true;
+                        // Note: In a real app, we'd set up a timer subscription
+                        // For now, manual polling via PollDeviceFlow message
+                    } else {
+                        // Open browser for OAuth
+                        return Task::done(Message::OpenOAuthBrowser(response.auth_url));
+                    }
+                }
+                Err(e) => {
+                    state.adding_account = false;
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::OpenOAuthBrowser(url) => {
+            // Open URL in default browser
+            #[cfg(target_os = "macos")]
+            {
+                let _ = std::process::Command::new("open").arg(&url).spawn();
+            }
+            #[cfg(target_os = "windows")]
+            {
+                let _ = std::process::Command::new("cmd")
+                    .args(["/C", "start", "", &url])
+                    .spawn();
+            }
+            #[cfg(target_os = "linux")]
+            {
+                let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+            }
+            Task::none()
+        }
+
+        Message::PollDeviceFlow => {
+            if !state.polling_device_flow {
+                return Task::none();
+            }
+
+            let email = state.add_account_email.clone();
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.check_device_flow(&email).await
+                },
+                Message::DeviceFlowStatusReceived,
+            )
+        }
+
+        Message::DeviceFlowStatusReceived(result) => {
+            match result {
+                Ok(status) => {
+                    match status.status {
+                        DeviceFlowState::Complete => {
+                            // Account added successfully
+                            state.adding_account = false;
+                            state.polling_device_flow = false;
+                            state.oauth_response = None;
+                            state.add_account_email.clear();
+                            // Refresh account list
+                            return Task::done(Message::FetchSyncStatus);
+                        }
+                        DeviceFlowState::Pending => {
+                            // Keep polling - in a real app this would be on a timer
+                        }
+                        DeviceFlowState::Expired | DeviceFlowState::Error => {
+                            state.adding_account = false;
+                            state.polling_device_flow = false;
+                            state.loading = LoadingState::Error(
+                                status.error.unwrap_or_else(|| "Device flow failed".to_string()),
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    state.polling_device_flow = false;
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::CancelAddAccount => {
+            state.adding_account = false;
+            state.polling_device_flow = false;
+            state.oauth_response = None;
+            state.add_account_email.clear();
+            Task::none()
+        }
+
+        Message::ShowRemoveAccountModal(email) => {
+            state.removing_account = Some(email);
+            state.show_remove_modal = true;
+            Task::none()
+        }
+
+        Message::HideRemoveAccountModal => {
+            state.removing_account = None;
+            state.show_remove_modal = false;
+            Task::none()
+        }
+
+        Message::ConfirmRemoveAccount => {
+            state.show_remove_modal = false;
+            if let Some(email) = state.removing_account.take() {
+                let url = state.server_url.clone();
+                let api_key = if state.api_key.is_empty() {
+                    None
+                } else {
+                    Some(state.api_key.clone())
+                };
+
+                return Task::perform(
+                    async move {
+                        let client = ApiClient::new(url, api_key);
+                        client.remove_account(&email).await
+                    },
+                    Message::AccountRemoved,
+                );
+            }
+            Task::none()
+        }
+
+        Message::AccountRemoved(result) => {
+            match result {
+                Ok(_) => {
+                    // Refresh account list
+                    return Task::done(Message::FetchSyncStatus);
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
         // === Selection ===
         Message::ToggleSelection => {
             // Toggle selection based on current view
@@ -871,6 +1061,11 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         // y - open sync status view (sYnc)
         Key::Character(ref c) if c == "y" && !modifiers.shift() => {
             Task::done(Message::OpenSync)
+        }
+
+        // a - open accounts view
+        Key::Character(ref c) if c == "a" && !modifiers.shift() => {
+            Task::done(Message::OpenAccounts)
         }
 
         _ => Task::none(),

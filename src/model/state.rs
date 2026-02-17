@@ -4,8 +4,8 @@
 //! Contains all application state that determines what to render.
 
 use crate::api::types::{
-    AccountSyncStatus, AggregateRow, MessageDetail, MessageSummary, SortDirection, SortField,
-    StatsResponse,
+    AccountSyncStatus, AggregateRow, MessageDetail, MessageSummary, OAuthInitResponse,
+    SortDirection, SortField, StatsResponse,
 };
 use crate::config::Settings;
 use crate::model::navigation::NavigationStack;
@@ -117,6 +117,20 @@ pub struct AppState {
     pub sync_loading: bool,
     /// Currently syncing account (if manual sync triggered)
     pub syncing_account: Option<String>,
+
+    // === Account Management ===
+    /// Email input for adding new account
+    pub add_account_email: String,
+    /// Whether we're in the add account flow
+    pub adding_account: bool,
+    /// OAuth response (for device flow display)
+    pub oauth_response: Option<OAuthInitResponse>,
+    /// Whether we're polling device flow
+    pub polling_device_flow: bool,
+    /// Account being removed (for confirmation)
+    pub removing_account: Option<String>,
+    /// Whether the account removal modal is showing
+    pub show_remove_modal: bool,
 }
 
 impl AppState {
@@ -168,6 +182,14 @@ impl AppState {
             sync_accounts: Vec::new(),
             sync_loading: false,
             syncing_account: None,
+
+            // Account Management
+            add_account_email: String::new(),
+            adding_account: false,
+            oauth_response: None,
+            polling_device_flow: false,
+            removing_account: None,
+            show_remove_modal: false,
         }
     }
 

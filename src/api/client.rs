@@ -3,8 +3,9 @@
 //! Handles all HTTP communication with the msgvault server.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SchedulerStatus,
-    SearchResponse, SortDirection, SortField, StatsResponse, SyncTriggerResponse, ViewType,
+    AggregateResponse, DeviceFlowStatus, HealthResponse, MessageDetail, MessageListResponse,
+    OAuthInitResponse, RemoveAccountResponse, SchedulerStatus, SearchResponse, SortDirection,
+    SortField, StatsResponse, SyncTriggerResponse, ViewType,
 };
 use crate::error::AppError;
 use reqwest::Client;
@@ -293,6 +294,87 @@ impl ApiClient {
             response.json().await.map_err(|e| AppError::ApiError {
                 status: 0,
                 message: format!("Invalid sync trigger response: {}", e),
+            })?;
+
+        Ok(result)
+    }
+
+    /// Initiate OAuth flow for adding an account
+    ///
+    /// Returns URL to open in browser or device flow info.
+    pub async fn initiate_oauth(&self, email: &str) -> Result<OAuthInitResponse, AppError> {
+        let path = format!("/api/v1/auth/initiate/{}", urlencoding::encode(email));
+
+        let response = self
+            .request(reqwest::Method::POST, &path)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let result: OAuthInitResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid OAuth init response: {}", e),
+            })?;
+
+        Ok(result)
+    }
+
+    /// Check device flow status
+    ///
+    /// Polls to see if user has completed device flow authorization.
+    pub async fn check_device_flow(&self, email: &str) -> Result<DeviceFlowStatus, AppError> {
+        let path = format!(
+            "/api/v1/auth/device/{}/status",
+            urlencoding::encode(email)
+        );
+
+        let response = self.request(reqwest::Method::GET, &path).send().await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let result: DeviceFlowStatus =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid device flow status response: {}", e),
+            })?;
+
+        Ok(result)
+    }
+
+    /// Remove an account
+    ///
+    /// Deletes the specified email account from the server.
+    pub async fn remove_account(&self, email: &str) -> Result<RemoveAccountResponse, AppError> {
+        let path = format!("/api/v1/accounts/{}", urlencoding::encode(email));
+
+        let response = self
+            .request(reqwest::Method::DELETE, &path)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let result: RemoveAccountResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid remove account response: {}", e),
             })?;
 
         Ok(result)
