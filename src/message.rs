@@ -146,6 +146,60 @@ pub enum Message {
     /// Hide help modal
     HideHelp,
 
+    // === Compose ===
+    /// Open compose for new email
+    OpenCompose,
+    /// Open compose as reply to message
+    OpenReply(i64),
+    /// Open compose as reply-all to message
+    OpenReplyAll(i64),
+    /// Open compose as forward of message
+    OpenForward(i64),
+    /// To field input changed
+    ComposeToChanged(String),
+    /// Add recipient to To field
+    ComposeAddTo,
+    /// Remove recipient from To field
+    ComposeRemoveTo(usize),
+    /// CC field input changed
+    ComposeCcChanged(String),
+    /// Add recipient to CC field
+    ComposeAddCc,
+    /// Remove recipient from CC field
+    ComposeRemoveCc(usize),
+    /// BCC field input changed
+    ComposeBccChanged(String),
+    /// Add recipient to BCC field
+    ComposeAddBcc,
+    /// Remove recipient from BCC field
+    ComposeRemoveBcc(usize),
+    /// Subject changed
+    ComposeSubjectChanged(String),
+    /// Body changed
+    ComposeBodyChanged(String),
+    /// From account changed
+    ComposeFromChanged(String),
+    /// Toggle CC/BCC visibility
+    ComposeToggleCcBcc,
+    /// Add attachment
+    ComposeAddAttachment,
+    /// Attachment file selected
+    ComposeAttachmentSelected(std::path::PathBuf),
+    /// Remove attachment
+    ComposeRemoveAttachment(usize),
+    /// Send the email
+    ComposeSend,
+    /// Email sent result
+    ComposeSent(Result<(), crate::error::AppError>),
+    /// Save as draft
+    ComposeSaveDraft,
+    /// Draft saved result
+    ComposeDraftSaved(Result<i64, crate::error::AppError>),
+    /// Discard and close compose
+    ComposeDiscard,
+    /// Close compose (with confirmation if dirty)
+    ComposeClose,
+
     // === Settings ===
     /// Open settings view
     OpenSettings,

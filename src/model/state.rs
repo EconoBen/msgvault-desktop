@@ -8,6 +8,7 @@ use crate::api::types::{
     SortDirection, SortField, StatsResponse,
 };
 use crate::config::{DiscoveryResult, DiscoveryStep, Settings};
+use crate::model::compose::ComposeState;
 use crate::model::navigation::NavigationStack;
 use std::collections::HashSet;
 
@@ -157,6 +158,10 @@ pub struct AppState {
     pub testing_connection: bool,
     /// Connection test result
     pub connection_test_result: Option<Result<(), String>>,
+
+    // === Compose ===
+    /// Compose email state
+    pub compose: ComposeState,
 }
 
 /// Settings tabs
@@ -256,6 +261,9 @@ impl AppState {
             settings_api_key: settings.api_key.clone(),
             testing_connection: false,
             connection_test_result: None,
+
+            // Compose
+            compose: ComposeState::new(),
         }
     }
 

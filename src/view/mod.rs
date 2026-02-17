@@ -5,6 +5,7 @@
 
 pub mod accounts;
 pub mod aggregates;
+pub mod compose;
 pub mod dashboard;
 pub mod layout;
 pub mod message_detail;
@@ -18,6 +19,7 @@ pub mod wizard;
 
 pub use accounts::accounts_view;
 pub use aggregates::aggregates_view;
+pub use compose::compose_modal;
 pub use layout::{three_panel_layout, two_panel_layout};
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
@@ -195,7 +197,13 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
     };
 
     // Overlay modals if showing
-    if state.show_help_modal {
+    if state.compose.is_open {
+        stack![
+            main_view,
+            compose_modal(&state.compose)
+        ]
+        .into()
+    } else if state.show_help_modal {
         stack![main_view, help_modal()].into()
     } else if state.show_delete_modal {
         stack![

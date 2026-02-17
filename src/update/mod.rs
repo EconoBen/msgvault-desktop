@@ -1018,6 +1018,263 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
 
         Message::RetryConnection => Task::done(Message::CheckHealth),
 
+        // === Compose ===
+        Message::OpenCompose => {
+            // Get first account email for the from field
+            let from_account = state
+                .sync_accounts
+                .first()
+                .map(|a| a.email.clone())
+                .unwrap_or_default();
+            state.compose = crate::model::ComposeState::open_new(from_account);
+            Task::none()
+        }
+
+        Message::OpenReply(message_id) => {
+            // TODO: Fetch message detail and populate reply
+            // For now, use current message if available
+            if let Some(msg) = &state.current_message {
+                let from_account = state
+                    .sync_accounts
+                    .first()
+                    .map(|a| a.email.clone())
+                    .unwrap_or_default();
+                let quoted = crate::model::compose::format_quoted_body(
+                    &msg.from_addr,
+                    &msg.sent_at.format("%b %d, %Y at %H:%M").to_string(),
+                    &msg.body,
+                );
+                state.compose = crate::model::ComposeState::open_reply(
+                    from_account,
+                    message_id,
+                    msg.from_addr.clone(),
+                    msg.subject.clone(),
+                    quoted,
+                );
+            }
+            Task::none()
+        }
+
+        Message::OpenReplyAll(message_id) => {
+            if let Some(msg) = &state.current_message {
+                let from_account = state
+                    .sync_accounts
+                    .first()
+                    .map(|a| a.email.clone())
+                    .unwrap_or_default();
+                let quoted = crate::model::compose::format_quoted_body(
+                    &msg.from_addr,
+                    &msg.sent_at.format("%b %d, %Y at %H:%M").to_string(),
+                    &msg.body,
+                );
+                // Combine to and cc, removing our own email
+                let mut all_recipients: Vec<String> = msg.to.clone();
+                all_recipients.push(msg.from_addr.clone());
+                all_recipients.retain(|e| e != &from_account);
+                let cc = msg.cc.iter().filter(|e| *e != &from_account).cloned().collect();
+
+                state.compose = crate::model::ComposeState::open_reply_all(
+                    from_account,
+                    message_id,
+                    all_recipients,
+                    cc,
+                    msg.subject.clone(),
+                    quoted,
+                );
+            }
+            Task::none()
+        }
+
+        Message::OpenForward(message_id) => {
+            if let Some(msg) = &state.current_message {
+                let from_account = state
+                    .sync_accounts
+                    .first()
+                    .map(|a| a.email.clone())
+                    .unwrap_or_default();
+                let forward_body = format!(
+                    "From: {}\nDate: {}\nSubject: {}\nTo: {}\n\n{}",
+                    msg.from_addr,
+                    msg.sent_at.format("%b %d, %Y at %H:%M"),
+                    msg.subject,
+                    msg.to.join(", "),
+                    msg.body
+                );
+                state.compose = crate::model::ComposeState::open_forward(
+                    from_account,
+                    message_id,
+                    msg.subject.clone(),
+                    forward_body,
+                );
+            }
+            Task::none()
+        }
+
+        Message::ComposeToChanged(input) => {
+            state.compose.to_input = input;
+            Task::none()
+        }
+
+        Message::ComposeAddTo => {
+            let email = state.compose.to_input.trim().to_string();
+            state.compose.add_to(email);
+            state.compose.to_input.clear();
+            Task::none()
+        }
+
+        Message::ComposeRemoveTo(index) => {
+            state.compose.remove_to(index);
+            Task::none()
+        }
+
+        Message::ComposeCcChanged(input) => {
+            state.compose.cc_input = input;
+            Task::none()
+        }
+
+        Message::ComposeAddCc => {
+            let email = state.compose.cc_input.trim().to_string();
+            state.compose.add_cc(email);
+            state.compose.cc_input.clear();
+            Task::none()
+        }
+
+        Message::ComposeRemoveCc(index) => {
+            state.compose.remove_cc(index);
+            Task::none()
+        }
+
+        Message::ComposeBccChanged(input) => {
+            state.compose.bcc_input = input;
+            Task::none()
+        }
+
+        Message::ComposeAddBcc => {
+            let email = state.compose.bcc_input.trim().to_string();
+            state.compose.add_bcc(email);
+            state.compose.bcc_input.clear();
+            Task::none()
+        }
+
+        Message::ComposeRemoveBcc(index) => {
+            state.compose.remove_bcc(index);
+            Task::none()
+        }
+
+        Message::ComposeSubjectChanged(subject) => {
+            state.compose.subject = subject;
+            state.compose.is_dirty = true;
+            Task::none()
+        }
+
+        Message::ComposeBodyChanged(body) => {
+            state.compose.body = body;
+            state.compose.is_dirty = true;
+            Task::none()
+        }
+
+        Message::ComposeFromChanged(account) => {
+            state.compose.from_account = account;
+            Task::none()
+        }
+
+        Message::ComposeToggleCcBcc => {
+            state.compose.show_cc_bcc = !state.compose.show_cc_bcc;
+            Task::none()
+        }
+
+        Message::ComposeAddAttachment => {
+            // TODO: Open file picker dialog
+            // This would require native file dialog integration
+            Task::none()
+        }
+
+        Message::ComposeAttachmentSelected(path) => {
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                let filename = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "attachment".to_string());
+                state.compose.attachments.push(crate::model::AttachmentDraft {
+                    path,
+                    filename,
+                    size_bytes: metadata.len() as i64,
+                    mime_type: None,
+                });
+                state.compose.is_dirty = true;
+            }
+            Task::none()
+        }
+
+        Message::ComposeRemoveAttachment(index) => {
+            if index < state.compose.attachments.len() {
+                state.compose.attachments.remove(index);
+                state.compose.is_dirty = true;
+            }
+            Task::none()
+        }
+
+        Message::ComposeSend => {
+            if !state.compose.can_send() {
+                return Task::none();
+            }
+            state.compose.is_sending = true;
+            state.compose.send_error = None;
+
+            // TODO: Implement actual send via API
+            // POST /api/v1/messages/send
+            // For now, just simulate success after a delay
+            Task::none()
+        }
+
+        Message::ComposeSent(result) => {
+            state.compose.is_sending = false;
+            match result {
+                Ok(_) => {
+                    state.compose.close();
+                }
+                Err(e) => {
+                    state.compose.send_error = Some(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::ComposeSaveDraft => {
+            // TODO: Implement draft saving via API
+            // POST /api/v1/messages/draft
+            Task::none()
+        }
+
+        Message::ComposeDraftSaved(result) => {
+            match result {
+                Ok(_draft_id) => {
+                    state.compose.is_dirty = false;
+                    // Optionally close or show confirmation
+                }
+                Err(e) => {
+                    state.compose.send_error = Some(format!("Failed to save draft: {}", e));
+                }
+            }
+            Task::none()
+        }
+
+        Message::ComposeDiscard => {
+            state.compose.close();
+            Task::none()
+        }
+
+        Message::ComposeClose => {
+            if state.compose.is_dirty && state.compose.has_content() {
+                // TODO: Show confirmation dialog
+                // For now, just close
+                state.compose.close();
+            } else {
+                state.compose.close();
+            }
+            Task::none()
+        }
+
         // === Keyboard ===
         Message::KeyPressed(key, modifiers) => handle_key_press(state, key, modifiers),
 
@@ -1255,6 +1512,38 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         // comma - open settings (standard macOS shortcut)
         Key::Character(ref c) if c == "," => {
             Task::done(Message::OpenSettings)
+        }
+
+        // c - compose new message
+        Key::Character(ref c) if c == "c" && !modifiers.shift() && !state.compose.is_open => {
+            Task::done(Message::OpenCompose)
+        }
+
+        // r - reply (when viewing message detail)
+        Key::Character(ref c) if c == "r" && !modifiers.shift() && in_detail => {
+            if let ViewLevel::MessageDetail { message_id } = state.navigation.current() {
+                Task::done(Message::OpenReply(*message_id))
+            } else {
+                Task::none()
+            }
+        }
+
+        // R (shift) - reply all (when viewing message detail)
+        Key::Character(ref c) if c == "R" && modifiers.shift() && in_detail => {
+            if let ViewLevel::MessageDetail { message_id } = state.navigation.current() {
+                Task::done(Message::OpenReplyAll(*message_id))
+            } else {
+                Task::none()
+            }
+        }
+
+        // f - forward (when viewing message detail)
+        Key::Character(ref c) if c == "f" && !modifiers.shift() && in_detail => {
+            if let ViewLevel::MessageDetail { message_id } = state.navigation.current() {
+                Task::done(Message::OpenForward(*message_id))
+            } else {
+                Task::none()
+            }
         }
 
         _ => Task::none(),
