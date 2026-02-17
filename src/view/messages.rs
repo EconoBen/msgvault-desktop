@@ -1,250 +1,321 @@
 //! Messages list view
 //!
-//! Displays a scrollable list of message summaries with pagination.
-//! Each row shows subject, sender, date, size, and attachment indicator.
+//! Displays a polished scrollable list of message summaries with avatars,
+//! unread indicators, and modern styling.
 
 use crate::api::types::MessageSummary;
 use crate::message::Message;
-use crate::view::widgets::format_bytes;
+use crate::theme::{colors, components, spacing, typography};
+use crate::view::widgets::{avatar, format_bytes};
 use chrono::{DateTime, Datelike, Local, Utc};
 use iced::widget::{column, container, row, scrollable, text, Space};
-use iced::{Element, Length};
+use iced::{Background, Border, Element, Length};
 use std::collections::HashSet;
 
 /// Render the messages list view
 pub fn messages_view<'a>(
-    filter_description: &'a str,
+    filter_description: String,
     messages: &'a [MessageSummary],
     selected_index: usize,
     offset: i64,
     total: i64,
     selected_messages: &'a HashSet<i64>,
 ) -> Element<'a, Message> {
-    // Header with filter description and selection count
-    let header = header_row(filter_description, offset, messages.len(), total, selected_messages.len());
+    // Header with filter description and counts
+    let header = header_section(filter_description, offset, messages.len(), total, selected_messages.len());
 
-    // Column headers
-    let column_headers = column_header_row();
-
-    // Scrollable list of message rows
+    // Message list
     let list_content: Element<'a, Message> = if messages.is_empty() {
-        container(text("No messages found").size(14))
-            .padding(20)
-            .into()
+        empty_state()
     } else {
         let rows: Vec<Element<'a, Message>> = messages
             .iter()
             .enumerate()
-            .map(|(i, msg)| message_row(msg, i == selected_index, selected_messages.contains(&msg.id)))
+            .map(|(i, msg)| {
+                message_row(
+                    msg,
+                    i == selected_index,
+                    selected_messages.contains(&msg.id),
+                )
+            })
             .collect();
 
-        scrollable(column(rows).spacing(2))
+        scrollable(column(rows).spacing(1))
             .height(Length::Fill)
             .into()
     };
 
-    // Pagination info
-    let pagination = pagination_info(offset, messages.len(), total);
-
-    // Keyboard hints
-    let hints =
-        text("Up/Down: navigate | Enter: open | Space: select | A: all | x: clear | d: delete").size(12);
+    // Pagination and hints
+    let footer = footer_section(offset, messages.len(), total);
 
     column![
         header,
-        Space::with_height(10),
-        column_headers,
-        Space::with_height(5),
+        Space::with_height(spacing::MD),
         list_content,
-        Space::with_height(10),
-        pagination,
-        Space::with_height(5),
-        hints,
+        Space::with_height(spacing::MD),
+        footer,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::LG)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
 }
 
-/// Header row showing filter description
-fn header_row<'a>(
-    filter_description: &'a str,
+/// Header section with title and counts
+fn header_section(
+    filter_description: String,
     offset: i64,
     page_count: usize,
     total: i64,
     selection_count: usize,
-) -> Element<'a, Message> {
-    let title = text(filter_description).size(20);
+) -> Element<'static, Message> {
+    let title = text(filter_description)
+        .size(typography::SIZE_LG)
+        .style(components::text_primary);
 
-    let selection_info = if selection_count > 0 {
-        text(format!("{} selected", selection_count))
-            .size(12)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                iced::widget::text::Style {
-                    color: Some(palette.primary),
-                }
-            })
+    let selection_badge: Element<'static, Message> = if selection_count > 0 {
+        container(
+            text(format!("{} selected", selection_count))
+                .size(typography::SIZE_XS)
+                .style(components::text_accent)
+        )
+        .padding([2, spacing::SM])
+        .style(|_| container::Style {
+            background: Some(Background::Color(colors::with_alpha(colors::ACCENT_PRIMARY, 0.15))),
+            border: Border {
+                radius: 4.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
     } else {
-        text("").size(12)
+        Space::with_width(0).into()
     };
 
-    let count_info = text(format!(
-        "Showing {}-{} of {}",
+    let count_text = text(format!(
+        "{}-{} of {}",
         offset + 1,
-        offset + page_count as i64,
+        (offset + page_count as i64).min(total),
         total
     ))
-    .size(12);
+    .size(typography::SIZE_XS)
+    .style(components::text_muted);
 
-    row![title, Space::with_width(Length::Fill), selection_info, Space::with_width(20), count_info]
-        .align_y(iced::Alignment::Center)
-        .into()
-}
-
-/// Column header row
-fn column_header_row<'a>() -> Element<'a, Message> {
-    let select_header = text("").size(12).width(Length::Fixed(24.0)); // Selection checkbox
-    let subject_header = text("Subject").size(12).width(Length::FillPortion(4));
-    let from_header = text("From").size(12).width(Length::FillPortion(3));
-    let date_header = text("Date").size(12).width(Length::FillPortion(2));
-    let size_header = text("Size").size(12).width(Length::FillPortion(1));
-    let attach_header = text("").size(12).width(Length::Fixed(20.0)); // Attachment indicator
-
-    container(
-        row![
-            select_header,
-            subject_header,
-            from_header,
-            date_header,
-            size_header,
-            attach_header
-        ]
-        .spacing(10)
-        .padding([5, 10]),
-    )
-    .style(|theme: &iced::Theme| {
-        let palette = theme.palette();
-        container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                a: 0.1,
-                ..palette.text
-            })),
-            ..Default::default()
-        }
-    })
-    .width(Length::Fill)
+    row![
+        title,
+        Space::with_width(Length::Fill),
+        selection_badge,
+        Space::with_width(spacing::MD),
+        count_text,
+    ]
+    .align_y(iced::Alignment::Center)
     .into()
 }
 
-/// Single message row
-fn message_row<'a>(msg: &'a MessageSummary, is_cursor: bool, is_checked: bool) -> Element<'a, Message> {
-    // Selection checkbox indicator
-    let checkbox_indicator = if is_checked { "[x]" } else { "[ ]" };
-    let checkbox = text(checkbox_indicator)
-        .size(14)
-        .width(Length::Fixed(24.0));
+/// Empty state when no messages
+fn empty_state<'a>() -> Element<'a, Message> {
+    container(
+        column![
+            text("No messages").size(typography::SIZE_MD).style(components::text_secondary),
+            Space::with_height(spacing::XS),
+            text("Try adjusting your filters")
+                .size(typography::SIZE_SM)
+                .style(components::text_muted),
+        ]
+        .align_x(iced::Alignment::Center)
+    )
+    .width(Length::Fill)
+    .padding(spacing::XXL)
+    .into()
+}
 
-    let subject = text(truncate_string(&msg.subject, 50))
-        .size(14)
-        .width(Length::FillPortion(4));
-
-    let from_display = msg
+/// Single message row with avatar and modern styling
+fn message_row<'a>(msg: &'a MessageSummary, is_focused: bool, is_selected: bool) -> Element<'a, Message> {
+    // Determine display name
+    let display_name = msg
         .from_name
         .as_ref()
         .filter(|n| !n.is_empty())
         .map(|n| n.as_str())
         .unwrap_or(&msg.from_email);
-    let from = text(truncate_string(from_display, 30))
-        .size(14)
-        .width(Length::FillPortion(3));
 
-    let date = text(format_date(&msg.sent_at))
-        .size(14)
-        .width(Length::FillPortion(2));
+    // Avatar
+    let avatar_widget = avatar(display_name, 40);
 
-    let size = text(format_bytes(msg.size_bytes))
-        .size(14)
-        .width(Length::FillPortion(1));
+    // Unread indicator (placeholder - would need is_unread field)
+    // TODO: Add unread indicator when is_unread field is available
+    let _unread_indicator: Element<'a, Message> = Space::with_width(spacing::XS).into();
 
-    let attachment_indicator = if msg.has_attachments { "📎" } else { "" };
-    let attach = text(attachment_indicator)
-        .size(14)
-        .width(Length::Fixed(20.0));
-
-    let row_content = row![checkbox, subject, from, date, size, attach]
-        .spacing(10)
-        .padding([8, 10]);
-
-    // Style based on cursor position and selection state
-    let style = if is_cursor {
-        // Cursor position - highlighted
-        container(row_content)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                container::Style {
-                    background: Some(iced::Background::Color(palette.primary)),
-                    text_color: Some(iced::Color::WHITE),
+    // Selection checkbox
+    let checkbox: Element<'a, Message> = if is_selected {
+        container(text("✓").size(typography::SIZE_XS))
+            .width(Length::Fixed(20.0))
+            .height(Length::Fixed(20.0))
+            .style(|_| container::Style {
+                background: Some(Background::Color(colors::ACCENT_PRIMARY)),
+                border: Border {
+                    radius: 4.0.into(),
                     ..Default::default()
-                }
+                },
+                ..Default::default()
             })
-    } else if is_checked {
-        // Selected but not cursor - subtle highlight
-        container(row_content)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                container::Style {
-                    background: Some(iced::Background::Color(iced::Color {
-                        a: 0.2,
-                        ..palette.primary
-                    })),
-                    ..Default::default()
-                }
-            })
+            .into()
     } else {
-        // Normal row
-        container(row_content)
+        container(text("").size(typography::SIZE_XS))
+            .width(Length::Fixed(20.0))
+            .height(Length::Fixed(20.0))
+            .style(|_| container::Style {
+                background: Some(Background::Color(colors::BG_ELEVATED)),
+                border: Border {
+                    radius: 4.0.into(),
+                    width: 1.0,
+                    color: colors::BORDER_SUBTLE,
+                },
+                ..Default::default()
+            })
+            .into()
     };
 
-    style.width(Length::Fill).into()
-}
+    // Main content
+    let sender_name = text(truncate_string(display_name, 25))
+        .size(typography::SIZE_SM)
+        .style(components::text_primary);
 
-/// Pagination info row
-fn pagination_info<'a>(offset: i64, page_count: usize, total: i64) -> Element<'a, Message> {
-    let start = offset + 1;
-    let end = offset + page_count as i64;
+    let subject_text = text(truncate_string(&msg.subject, 60))
+        .size(typography::SIZE_SM)
+        .style(if is_focused {
+            components::text_primary
+        } else {
+            components::text_secondary
+        });
 
-    let info = if total == 0 {
-        "No messages".to_string()
+    let date_text = text(format_relative_time(&msg.sent_at))
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
+
+    // Attachment indicator
+    let attachment: Element<'a, Message> = if msg.has_attachments {
+        text("📎")
+            .size(typography::SIZE_XS)
+            .style(components::text_muted)
+            .into()
     } else {
-        format!("Showing {} - {} of {} messages", start, end, total)
+        Space::with_width(0).into()
     };
 
-    text(info).size(12).into()
+    // Size
+    let size_text = text(format_bytes(msg.size_bytes))
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
+
+    // Content layout
+    let content = column![
+        row![
+            sender_name,
+            Space::with_width(Length::Fill),
+            date_text,
+        ].align_y(iced::Alignment::Center),
+        Space::with_height(2),
+        row![
+            subject_text,
+            Space::with_width(Length::Fill),
+            attachment,
+            Space::with_width(spacing::SM),
+            size_text,
+        ].align_y(iced::Alignment::Center),
+    ]
+    .width(Length::Fill);
+
+    // Row layout
+    let row_content = row![
+        checkbox,
+        Space::with_width(spacing::SM),
+        avatar_widget,
+        Space::with_width(spacing::MD),
+        content,
+    ]
+    .align_y(iced::Alignment::Center)
+    .padding([spacing::SM, spacing::MD]);
+
+    // Apply styling based on state
+    let bg_color = if is_focused {
+        colors::SELECTION_BG
+    } else if is_selected {
+        colors::with_alpha(colors::ACCENT_PRIMARY, 0.08)
+    } else {
+        colors::BG_SURFACE
+    };
+
+    container(row_content)
+        .width(Length::Fill)
+        .style(move |_| container::Style {
+            background: Some(Background::Color(bg_color)),
+            border: Border {
+                radius: 4.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
 }
 
-/// Format a datetime for display
-fn format_date(dt: &DateTime<Utc>) -> String {
+/// Footer with pagination and keyboard hints
+fn footer_section(offset: i64, _page_count: usize, total: i64) -> Element<'static, Message> {
+    let pagination = text(format!(
+        "Page {} of {}",
+        (offset / 50) + 1,
+        (total / 50) + 1
+    ))
+    .size(typography::SIZE_XS)
+    .style(components::text_muted);
+
+    let hints = text("j/k: navigate • Enter: open • Space: select • d: delete • n/p: pages")
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
+
+    row![
+        pagination,
+        Space::with_width(Length::Fill),
+        hints,
+    ]
+    .align_y(iced::Alignment::Center)
+    .into()
+}
+
+/// Format datetime as relative time (Today, Yesterday, or date)
+fn format_relative_time(dt: &DateTime<Utc>) -> String {
     let local: DateTime<Local> = dt.with_timezone(&Local);
     let now = Local::now();
 
-    // If today, show time only
+    // If today, show time
     if local.date_naive() == now.date_naive() {
         return local.format("%H:%M").to_string();
     }
 
-    // If this year, show month and day
+    // If yesterday
+    let yesterday = now.date_naive().pred_opt().unwrap_or(now.date_naive());
+    if local.date_naive() == yesterday {
+        return "Yesterday".to_string();
+    }
+
+    // If this week (within 7 days)
+    let days_ago = (now.date_naive() - local.date_naive()).num_days();
+    if days_ago < 7 {
+        return local.format("%A").to_string(); // Day name
+    }
+
+    // If this year
     if local.year() == now.year() {
         return local.format("%b %d").to_string();
     }
 
-    // Otherwise show full date
-    local.format("%Y-%m-%d").to_string()
+    // Otherwise full date
+    local.format("%b %d, %Y").to_string()
 }
 
-/// Truncate a string to a maximum length, adding ellipsis if needed
+/// Truncate a string with ellipsis
 fn truncate_string(s: &str, max_len: usize) -> String {
     if s.len() <= max_len {
         s.to_string()

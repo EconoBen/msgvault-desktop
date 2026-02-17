@@ -158,4 +158,23 @@ impl NavigationStack {
         self.history.clear();
         self.current = Some(ViewLevel::Dashboard);
     }
+
+    /// Get the filter description from the parent Messages view (for MessageDetail)
+    pub fn current_filter_description(&self) -> Option<String> {
+        // First check if current is Messages
+        if let Some(ViewLevel::Messages { filter_description }) = &self.current {
+            return Some(filter_description.clone());
+        }
+
+        // If current is MessageDetail, look in history for Messages
+        if matches!(self.current, Some(ViewLevel::MessageDetail { .. })) {
+            for view in self.history.iter().rev() {
+                if let ViewLevel::Messages { filter_description } = view {
+                    return Some(filter_description.clone());
+                }
+            }
+        }
+
+        None
+    }
 }

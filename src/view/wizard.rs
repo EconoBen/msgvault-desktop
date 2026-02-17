@@ -7,12 +7,12 @@ use crate::message::Message;
 use crate::model::WizardStep;
 use crate::theme::{colors, components, spacing, typography};
 use iced::widget::{button, center, column, container, row, text, text_input, Space};
-use iced::{Background, Border, Element, Length};
+use iced::{Element, Length};
 
 /// Render the wizard view based on current step
 pub fn wizard_view<'a>(
     step: WizardStep,
-    discovering: bool,
+    _discovering: bool,
     discovery_steps: &'a [DiscoveryStep],
     discovery_result: Option<&'a DiscoveryResult>,
     server_url: &'a str,

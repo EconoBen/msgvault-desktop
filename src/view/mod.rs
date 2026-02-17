@@ -6,20 +6,24 @@
 pub mod accounts;
 pub mod aggregates;
 pub mod dashboard;
+pub mod layout;
 pub mod message_detail;
 pub mod messages;
 pub mod search;
 pub mod settings;
+pub mod sidebar;
 pub mod sync;
 pub mod widgets;
 pub mod wizard;
 
 pub use accounts::accounts_view;
 pub use aggregates::aggregates_view;
+pub use layout::{three_panel_layout, two_panel_layout};
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
 pub use search::search_view;
 pub use settings::settings_view;
+pub use sidebar::sidebar;
 pub use sync::sync_view;
 pub use wizard::wizard_view;
 
@@ -138,8 +142,18 @@ fn connection_view(state: &AppState) -> Element<'_, Message> {
 
 /// Main connected view with navigation and content
 fn connected_view(state: &AppState) -> Element<'_, Message> {
-    // Header with app title and breadcrumb
-    let header = header_view(state);
+    // Get account emails for sidebar
+    let account_emails: Vec<String> = state
+        .sync_accounts
+        .iter()
+        .map(|a| a.email.clone())
+        .collect();
+
+    // Get labels (empty for now - would come from API)
+    let labels: Vec<String> = vec![];
+
+    // Create sidebar
+    let sidebar_element = sidebar(state.navigation.current(), &account_emails, &labels);
 
     // Main content based on loading state and current view
     let content = match &state.loading {
@@ -148,10 +162,37 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
         LoadingState::Idle => view_content(state),
     };
 
-    let main_view: Element<'_, Message> = column![header, content]
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into();
+    // Use three-panel layout for message detail view
+    let main_view: Element<'_, Message> = match state.navigation.current() {
+        ViewLevel::MessageDetail { .. } => {
+            // Three-panel: sidebar + message list + detail
+            let filter_desc = state
+                .navigation
+                .current_filter_description()
+                .unwrap_or_else(|| "Messages".to_string());
+
+            let list_content = messages_view(
+                filter_desc,
+                &state.messages,
+                state.message_selected_index,
+                state.messages_offset,
+                state.messages_total,
+                &state.selected_messages,
+            );
+
+            let detail_content = if let Some(detail) = &state.current_message {
+                Some(message_detail_view(detail))
+            } else {
+                Some(loading("Loading message..."))
+            };
+
+            three_panel_layout(sidebar_element, list_content, detail_content)
+        }
+        _ => {
+            // Two-panel: sidebar + content
+            two_panel_layout(sidebar_element, content)
+        }
+    };
 
     // Overlay modals if showing
     if state.show_help_modal {
@@ -383,7 +424,7 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
         ViewLevel::Messages { filter_description } => {
             // Show message list view
             messages_view(
-                filter_description,
+                filter_description.clone(),
                 &state.messages,
                 state.message_selected_index,
                 state.messages_offset,
