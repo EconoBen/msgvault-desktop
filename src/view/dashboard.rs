@@ -5,6 +5,7 @@
 use crate::api::types::{StatsResponse, ViewType};
 use crate::message::Message;
 use crate::model::ViewLevel;
+use crate::theme::{colors, components, spacing, typography};
 use crate::view::widgets::{format_bytes, format_number, stats_card};
 use iced::widget::{button, column, row, text, Space};
 use iced::{Element, Length};
@@ -20,11 +21,13 @@ pub fn dashboard<'a>(stats: &StatsResponse) -> Element<'a, Message> {
         stats_card("Attachments", format_number(stats.total_attachments)),
         stats_card("Database Size", format_bytes(stats.database_size_bytes)),
     ]
-    .spacing(15)
+    .spacing(spacing::LG)
     .width(Length::Fill);
 
     // Quick navigation section
-    let nav_title = text("Browse by").size(16);
+    let nav_title = text("Browse by")
+        .size(typography::SIZE_MD)
+        .style(components::text_primary);
 
     let nav_buttons = row![
         nav_button("Senders", ViewType::Senders),
@@ -32,23 +35,24 @@ pub fn dashboard<'a>(stats: &StatsResponse) -> Element<'a, Message> {
         nav_button("Labels", ViewType::Labels),
         nav_button("Time", ViewType::Time),
     ]
-    .spacing(10);
+    .spacing(spacing::SM);
 
     // Keyboard hints
     let hints = text("Press Tab to cycle views • Esc to go back • ? for help")
-        .size(12);
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
 
     column![
         stats_row,
-        Space::with_height(30),
+        Space::with_height(spacing::XXL),
         nav_title,
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         nav_buttons,
         Space::with_height(Length::Fill),
         hints,
     ]
-    .spacing(10)
-    .padding(20)
+    .spacing(spacing::SM)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
@@ -56,8 +60,9 @@ pub fn dashboard<'a>(stats: &StatsResponse) -> Element<'a, Message> {
 
 /// Navigation button for quick access to views
 fn nav_button(label: &str, view_type: ViewType) -> Element<'_, Message> {
-    button(text(label).size(14))
-        .padding([10, 20])
+    button(text(label).size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::XL])
+        .style(components::button_secondary)
         .on_press(Message::NavigateTo(ViewLevel::Aggregates { view_type }))
         .into()
 }

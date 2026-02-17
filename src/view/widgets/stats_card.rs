@@ -3,21 +3,19 @@
 //! Displays a single statistic with label and value.
 
 use crate::message::Message;
+use crate::theme::{colors, components, spacing, typography};
 use iced::widget::{column, container, text};
-use iced::{Element, Length, Theme};
+use iced::{Background, Border, Element, Length, Theme};
 
 /// Render a stats card with label and value
 pub fn stats_card<'a>(label: &'a str, value: impl ToString) -> Element<'a, Message> {
-    let card_style = |theme: &Theme| {
-        let palette = theme.palette();
+    let card_style = |_theme: &Theme| {
         container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                a: 0.1,
-                ..palette.primary
-            })),
-            border: iced::Border {
+            background: Some(Background::Color(colors::BG_SURFACE)),
+            border: Border {
                 radius: 8.0.into(),
-                ..Default::default()
+                width: 1.0,
+                color: colors::BORDER_SUBTLE,
             },
             ..Default::default()
         }
@@ -25,14 +23,18 @@ pub fn stats_card<'a>(label: &'a str, value: impl ToString) -> Element<'a, Messa
 
     container(
         column![
-            text(value.to_string()).size(28),
-            text(label).size(12),
+            text(value.to_string())
+                .size(typography::SIZE_XL)
+                .style(components::text_primary),
+            text(label)
+                .size(typography::SIZE_XS)
+                .style(components::text_muted),
         ]
-        .spacing(5)
+        .spacing(spacing::XS)
         .align_x(iced::Alignment::Center),
     )
     .width(Length::Fill)
-    .padding(20)
+    .padding(spacing::XL)
     .style(card_style)
     .into()
 }

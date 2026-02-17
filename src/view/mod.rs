@@ -23,6 +23,7 @@ pub use sync::sync_view;
 
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
+use crate::theme::{colors, components, spacing, typography};
 use dashboard::dashboard;
 use iced::widget::{button, center, column, container, row, stack, text, text_input, Space};
 use iced::{Element, Length, Theme};
@@ -34,70 +35,93 @@ pub fn render(state: &AppState) -> Element<'_, Message> {
         // Show connection/setup view
         connection_view(state)
     } else {
-        // Show main application view (placeholder for Phase 2)
+        // Show main application view
         connected_view(state)
     };
 
     container(content)
         .width(Length::Fill)
         .height(Length::Fill)
-        .padding(20)
+        .padding(spacing::XL)
+        .style(|_theme| container::Style {
+            background: Some(iced::Background::Color(colors::BG_BASE)),
+            ..Default::default()
+        })
         .into()
 }
 
 /// Connection setup view - shown on first run or when disconnected
 fn connection_view(state: &AppState) -> Element<'_, Message> {
-    let title = text("msgvault").size(32);
+    let title = text("msgvault")
+        .size(typography::SIZE_2XL)
+        .style(components::text_primary);
 
-    let subtitle = text("Connect to your msgvault server").size(16);
+    let subtitle = text("Connect to your msgvault server")
+        .size(typography::SIZE_MD)
+        .style(components::text_secondary);
 
     let url_input = text_input(
         "Server URL (e.g., http://localhost:8080)",
         &state.server_url,
     )
     .on_input(Message::ServerUrlChanged)
-    .padding(10)
-    .width(Length::Fixed(400.0));
+    .padding(spacing::MD)
+    .width(Length::Fixed(400.0))
+    .style(components::text_input_style);
 
     let api_key_input = text_input("API Key (optional)", &state.api_key)
         .on_input(Message::ApiKeyChanged)
-        .padding(10)
+        .padding(spacing::MD)
         .width(Length::Fixed(400.0))
+        .style(components::text_input_style)
         .secure(true);
 
-    let connect_button = button(text("Connect"))
-        .padding([10, 20])
-        .on_press(Message::CheckHealth);
+    let connect_button = button(
+        text("Connect")
+            .size(typography::SIZE_BODY)
+    )
+    .padding([spacing::SM, spacing::XL])
+    .style(components::button_primary)
+    .on_press(Message::CheckHealth);
 
-    let status_text = match &state.connection_status {
-        ConnectionStatus::Unknown => text(""),
-        ConnectionStatus::Connecting => text("Connecting..."),
-        ConnectionStatus::Connected => text("Connected!").style(|_theme: &Theme| text::Style {
-            color: Some(iced::Color::from_rgb(0.0, 0.6, 0.0)),
-        }),
+    let status_text: Element<'_, Message> = match &state.connection_status {
+        ConnectionStatus::Unknown => Space::with_height(typography::SIZE_SM).into(),
+        ConnectionStatus::Connecting => text("Connecting...")
+            .size(typography::SIZE_SM)
+            .style(components::text_muted)
+            .into(),
+        ConnectionStatus::Connected => text("Connected!")
+            .size(typography::SIZE_SM)
+            .style(components::text_success)
+            .into(),
         ConnectionStatus::Failed(err) => text(format!("Failed: {}", truncate_error(err, 50)))
-            .style(|_theme: &Theme| text::Style {
-                color: Some(iced::Color::from_rgb(0.8, 0.0, 0.0)),
-            }),
+            .size(typography::SIZE_SM)
+            .style(components::text_error)
+            .into(),
     };
 
-    let form = column![
-        title,
-        Space::with_height(10),
-        subtitle,
-        Space::with_height(30),
-        url_input,
-        Space::with_height(10),
-        api_key_input,
-        Space::with_height(20),
-        connect_button,
-        Space::with_height(10),
-        status_text,
-    ]
-    .spacing(5)
-    .align_x(iced::Alignment::Center);
+    // Card container for the form
+    let form_card = container(
+        column![
+            title,
+            Space::with_height(spacing::SM),
+            subtitle,
+            Space::with_height(spacing::XXL),
+            url_input,
+            Space::with_height(spacing::MD),
+            api_key_input,
+            Space::with_height(spacing::XL),
+            connect_button,
+            Space::with_height(spacing::MD),
+            status_text,
+        ]
+        .spacing(spacing::XS)
+        .align_x(iced::Alignment::Center)
+    )
+    .style(components::card_style)
+    .padding(spacing::XXL);
 
-    center(form).into()
+    center(form_card).into()
 }
 
 /// Main connected view with navigation and content
@@ -137,18 +161,12 @@ fn help_modal() -> Element<'static, Message> {
     let backdrop = container(Space::new(Length::Fill, Length::Fill))
         .width(Length::Fill)
         .height(Length::Fill)
-        .style(|_theme: &Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.5,
-            })),
-            ..Default::default()
-        });
+        .style(components::modal_backdrop_style);
 
     // Help content
-    let title = text("Keyboard Shortcuts").size(20);
+    let title = text("Keyboard Shortcuts")
+        .size(typography::SIZE_LG)
+        .style(components::text_primary);
 
     let shortcuts = column![
         shortcut_row("Navigation", ""),
@@ -157,13 +175,13 @@ fn help_modal() -> Element<'static, Message> {
         shortcut_row("  Enter", "Open / Drill down"),
         shortcut_row("  Esc", "Go back"),
         shortcut_row("  Tab", "Cycle view types"),
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         shortcut_row("Views", ""),
         shortcut_row("  /", "Search"),
         shortcut_row("  y", "Sync status"),
         shortcut_row("  a", "Accounts"),
         shortcut_row("  ,", "Settings"),
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         shortcut_row("Actions", ""),
         shortcut_row("  Space", "Toggle selection"),
         shortcut_row("  Shift+A", "Select all"),
@@ -171,49 +189,36 @@ fn help_modal() -> Element<'static, Message> {
         shortcut_row("  d", "Delete selected"),
         shortcut_row("  s", "Toggle sort field"),
         shortcut_row("  r", "Reverse sort"),
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         shortcut_row("Messages", ""),
         shortcut_row("  n", "Next page"),
         shortcut_row("  p", "Previous page"),
         shortcut_row("  ← / →", "Prev/next message"),
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         shortcut_row("General", ""),
         shortcut_row("  ?", "Toggle this help"),
     ]
-    .spacing(3);
+    .spacing(spacing::XS);
 
-    let close_button = button(text("Close").size(14))
-        .padding([8, 16])
+    let close_button = button(text("Close").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_secondary)
         .on_press(Message::HideHelp);
 
     let dialog_content = column![
         title,
-        Space::with_height(15),
+        Space::with_height(spacing::LG),
         shortcuts,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         close_button,
     ]
-    .spacing(5)
-    .padding(25)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .align_x(iced::Alignment::Start);
 
     let dialog = container(dialog_content)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            container::Style {
-                background: Some(iced::Background::Color(palette.background)),
-                border: iced::Border {
-                    radius: 8.0.into(),
-                    width: 1.0,
-                    color: iced::Color {
-                        a: 0.3,
-                        ..palette.text
-                    },
-                },
-                ..Default::default()
-            }
-        })
-        .padding(10);
+        .style(components::modal_dialog_style)
+        .padding(spacing::SM);
 
     stack![backdrop, center(dialog)].into()
 }
@@ -222,18 +227,21 @@ fn help_modal() -> Element<'static, Message> {
 fn shortcut_row<'a>(key: &'a str, description: &'a str) -> Element<'a, Message> {
     if description.is_empty() {
         // Section header
-        text(key).size(14).style(|theme: &Theme| {
-            let palette = theme.palette();
-            iced::widget::text::Style {
-                color: Some(palette.primary),
-            }
-        }).into()
+        text(key)
+            .size(typography::SIZE_SM)
+            .style(components::text_accent)
+            .into()
     } else {
         row![
-            text(key).size(12).width(Length::Fixed(100.0)),
-            text(description).size(12),
+            text(key)
+                .size(typography::SIZE_XS)
+                .width(Length::Fixed(100.0))
+                .style(components::text_secondary),
+            text(description)
+                .size(typography::SIZE_XS)
+                .style(components::text_muted),
         ]
-        .spacing(10)
+        .spacing(spacing::SM)
         .into()
     }
 }
@@ -244,75 +252,48 @@ fn delete_confirmation_modal(count: usize) -> Element<'static, Message> {
     let backdrop = container(Space::new(Length::Fill, Length::Fill))
         .width(Length::Fill)
         .height(Length::Fill)
-        .style(|_theme: &Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.5,
-            })),
-            ..Default::default()
-        });
+        .style(components::modal_backdrop_style);
 
     // Modal dialog
-    let title = text("Confirm Delete").size(20);
+    let title = text("Confirm Delete")
+        .size(typography::SIZE_LG)
+        .style(components::text_primary);
+
     let message = text(format!(
         "Are you sure you want to stage {} message{} for deletion?",
         count,
         if count == 1 { "" } else { "s" }
     ))
-    .size(14);
+    .size(typography::SIZE_SM)
+    .style(components::text_secondary);
 
-    let cancel_button = button(text("Cancel").size(14))
-        .padding([8, 16])
+    let cancel_button = button(text("Cancel").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_secondary)
         .on_press(Message::HideDeleteModal);
 
-    let confirm_button = button(text("Delete").size(14))
-        .padding([8, 16])
-        .style(|theme: &iced::Theme, _status| {
-            button::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.2, 0.2))),
-                text_color: iced::Color::WHITE,
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
+    let confirm_button = button(text("Delete").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_danger)
         .on_press(Message::ConfirmDelete);
 
-    let buttons = row![cancel_button, Space::with_width(10), confirm_button]
+    let buttons = row![cancel_button, Space::with_width(spacing::SM), confirm_button]
         .align_y(iced::Alignment::Center);
 
     let dialog_content = column![
         title,
-        Space::with_height(15),
+        Space::with_height(spacing::LG),
         message,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         buttons,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .align_x(iced::Alignment::Center);
 
     let dialog = container(dialog_content)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            container::Style {
-                background: Some(iced::Background::Color(palette.background)),
-                border: iced::Border {
-                    radius: 8.0.into(),
-                    width: 1.0,
-                    color: iced::Color {
-                        a: 0.3,
-                        ..palette.text
-                    },
-                },
-                ..Default::default()
-            }
-        })
-        .padding(10);
+        .style(components::modal_dialog_style)
+        .padding(spacing::SM);
 
     // Center the dialog on the backdrop
     stack![
@@ -326,7 +307,9 @@ fn delete_confirmation_modal(count: usize) -> Element<'static, Message> {
 fn header_view(state: &AppState) -> Element<'_, Message> {
     let breadcrumbs = state.navigation.breadcrumbs();
 
-    let title = text("msgvault").size(24);
+    let title = text("msgvault")
+        .size(typography::SIZE_XL)
+        .style(components::text_primary);
 
     let breadcrumb_bar = if !breadcrumbs.is_empty() {
         breadcrumb(breadcrumbs)
@@ -335,24 +318,16 @@ fn header_view(state: &AppState) -> Element<'_, Message> {
     };
 
     let server_info = text(format!("Connected: {}", &state.server_url))
-        .size(11)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            text::Style {
-                color: Some(iced::Color {
-                    a: 0.6,
-                    ..palette.text
-                }),
-            }
-        });
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
 
     column![
         row![title, Space::with_width(Length::Fill), server_info]
             .align_y(iced::Alignment::Center)
-            .padding([10, 20]),
-        container(breadcrumb_bar).padding([0, 20]),
+            .padding([spacing::SM, spacing::XL]),
+        container(breadcrumb_bar).padding([0, spacing::XL]),
     ]
-    .spacing(5)
+    .spacing(spacing::XS)
     .into()
 }
 

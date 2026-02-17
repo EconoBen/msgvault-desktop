@@ -4,8 +4,9 @@
 
 use crate::message::Message;
 use crate::model::SettingsTab;
+use crate::theme::{colors, components, spacing, typography};
 use iced::widget::{button, column, container, row, text, text_input, Space};
-use iced::{Element, Length, Theme};
+use iced::{Background, Border, Element, Length, Theme};
 
 /// Render the settings view
 pub fn settings_view<'a>(
@@ -16,7 +17,9 @@ pub fn settings_view<'a>(
     connection_result: Option<&'a Result<(), String>>,
 ) -> Element<'a, Message> {
     // Header
-    let title = text("Settings").size(24);
+    let title = text("Settings")
+        .size(typography::SIZE_XL)
+        .style(components::text_primary);
 
     // Tab bar
     let tab_bar = tab_bar_widget(current_tab);
@@ -28,26 +31,29 @@ pub fn settings_view<'a>(
     };
 
     // Save button
-    let save_button = button(text("Save Settings").size(14))
-        .padding([10, 20])
+    let save_button = button(text("Save Settings").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::XL])
+        .style(components::button_primary)
         .on_press(Message::SaveSettings);
 
     // Keyboard hints
-    let hints = text(",: settings | Esc: back (without saving)").size(12);
+    let hints = text(",: settings | Esc: back (without saving)")
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
 
     column![
         title,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         tab_bar,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         content,
         Space::with_height(Length::Fill),
         row![Space::with_width(Length::Fill), save_button],
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         hints,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
@@ -58,32 +64,23 @@ fn tab_bar_widget(current: SettingsTab) -> Element<'static, Message> {
     let server_tab = tab_button("Server", SettingsTab::Server, current == SettingsTab::Server);
     let display_tab = tab_button("Display", SettingsTab::Display, current == SettingsTab::Display);
 
-    row![server_tab, Space::with_width(5), display_tab]
+    row![server_tab, Space::with_width(spacing::XS), display_tab]
         .into()
 }
 
 /// Single tab button
 fn tab_button(label: &'static str, tab: SettingsTab, is_active: bool) -> Element<'static, Message> {
-    let btn = button(text(label).size(14))
-        .padding([8, 20]);
+    let btn = button(text(label).size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::XL]);
 
     if is_active {
-        btn.style(|theme: &Theme, _status| {
-            let palette = theme.palette();
-            iced::widget::button::Style {
-                background: Some(iced::Background::Color(palette.primary)),
-                text_color: iced::Color::WHITE,
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
-        .on_press(Message::SwitchSettingsTab(tab))
-        .into()
+        btn.style(components::button_primary)
+           .on_press(Message::SwitchSettingsTab(tab))
+           .into()
     } else {
-        btn.on_press(Message::SwitchSettingsTab(tab)).into()
+        btn.style(components::button_ghost)
+           .on_press(Message::SwitchSettingsTab(tab))
+           .into()
     }
 }
 
@@ -94,40 +91,47 @@ fn server_tab<'a>(
     testing: bool,
     result: Option<&'a Result<(), String>>,
 ) -> Element<'a, Message> {
-    let url_label = text("Server URL").size(14);
+    let url_label = text("Server URL")
+        .size(typography::SIZE_SM)
+        .style(components::text_secondary);
+
     let url_input = text_input("http://localhost:8080", server_url)
         .on_input(Message::SettingsServerUrlChanged)
-        .padding(10)
-        .width(Length::Fill);
+        .padding(spacing::MD)
+        .width(Length::Fill)
+        .style(components::text_input_style);
 
-    let api_key_label = text("API Key").size(14);
+    let api_key_label = text("API Key")
+        .size(typography::SIZE_SM)
+        .style(components::text_secondary);
+
     let api_key_input = text_input("(optional)", api_key)
         .on_input(Message::SettingsApiKeyChanged)
-        .padding(10)
+        .padding(spacing::MD)
         .width(Length::Fill)
+        .style(components::text_input_style)
         .secure(true);
 
     // Test connection button and result
     let test_button = if testing {
-        button(text("Testing...").size(14)).padding([8, 16])
+        button(text("Testing...").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_secondary)
     } else {
-        button(text("Test Connection").size(14))
-            .padding([8, 16])
+        button(text("Test Connection").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_secondary)
             .on_press(Message::TestConnection)
     };
 
     let test_result: Element<'a, Message> = match result {
         Some(Ok(())) => text("Connected successfully!")
-            .size(14)
-            .style(|_theme: &Theme| iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.0, 0.6, 0.0)),
-            })
+            .size(typography::SIZE_SM)
+            .style(components::text_success)
             .into(),
         Some(Err(e)) => text(format!("Failed: {}", truncate_error(e, 50)))
-            .size(14)
-            .style(|_theme: &Theme| iced::widget::text::Style {
-                color: Some(iced::Color::from_rgb(0.8, 0.0, 0.0)),
-            })
+            .size(typography::SIZE_SM)
+            .style(components::text_error)
             .into(),
         None => Space::new(0, 0).into(),
     };
@@ -136,17 +140,17 @@ fn server_tab<'a>(
         column![
             url_label,
             url_input,
-            Space::with_height(15),
+            Space::with_height(spacing::LG),
             api_key_label,
             api_key_input,
-            Space::with_height(20),
-            row![test_button, Space::with_width(15), test_result]
+            Space::with_height(spacing::XL),
+            row![test_button, Space::with_width(spacing::LG), test_result]
                 .align_y(iced::Alignment::Center),
         ]
-        .spacing(5),
+        .spacing(spacing::XS),
     )
     .style(section_style)
-    .padding(20)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .into()
 }
@@ -158,26 +162,26 @@ fn display_tab<'a>() -> Element<'a, Message> {
 
     container(
         column![
-            text("Display Settings").size(18),
-            Space::with_height(15),
-            text("Theme: System Default").size(14),
-            Space::with_height(10),
-            text("Date Format: Auto").size(14),
-            Space::with_height(10),
-            text("(More display options coming soon)").size(12).style(|theme: &Theme| {
-                let palette = theme.palette();
-                iced::widget::text::Style {
-                    color: Some(iced::Color {
-                        a: 0.6,
-                        ..palette.text
-                    }),
-                }
-            }),
+            text("Display Settings")
+                .size(typography::SIZE_LG)
+                .style(components::text_primary),
+            Space::with_height(spacing::LG),
+            text("Theme: System Default")
+                .size(typography::SIZE_SM)
+                .style(components::text_secondary),
+            Space::with_height(spacing::SM),
+            text("Date Format: Auto")
+                .size(typography::SIZE_SM)
+                .style(components::text_secondary),
+            Space::with_height(spacing::SM),
+            text("(More display options coming soon)")
+                .size(typography::SIZE_XS)
+                .style(components::text_muted),
         ]
-        .spacing(5),
+        .spacing(spacing::XS),
     )
     .style(section_style)
-    .padding(20)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .into()
 }
@@ -192,20 +196,13 @@ fn truncate_error(s: &str, max_len: usize) -> String {
 }
 
 /// Section container style
-fn section_style(theme: &Theme) -> container::Style {
-    let palette = theme.palette();
+fn section_style(_theme: &Theme) -> container::Style {
     container::Style {
-        background: Some(iced::Background::Color(iced::Color {
-            a: 0.03,
-            ..palette.text
-        })),
-        border: iced::Border {
+        background: Some(Background::Color(colors::BG_SURFACE)),
+        border: Border {
             radius: 8.0.into(),
             width: 1.0,
-            color: iced::Color {
-                a: 0.1,
-                ..palette.text
-            },
+            color: colors::BORDER_SUBTLE,
         },
         ..Default::default()
     }
