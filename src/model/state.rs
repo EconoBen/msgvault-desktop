@@ -4,7 +4,8 @@
 //! Contains all application state that determines what to render.
 
 use crate::api::types::{
-    AggregateRow, MessageDetail, MessageSummary, SortDirection, SortField, StatsResponse,
+    AccountSyncStatus, AggregateRow, MessageDetail, MessageSummary, SortDirection, SortField,
+    StatsResponse,
 };
 use crate::config::Settings;
 use crate::model::navigation::NavigationStack;
@@ -108,6 +109,14 @@ pub struct AppState {
     pub selected_messages: HashSet<i64>,
     /// Whether the delete confirmation modal is showing
     pub show_delete_modal: bool,
+
+    // === Sync ===
+    /// Account sync status list
+    pub sync_accounts: Vec<AccountSyncStatus>,
+    /// Whether sync status is being fetched
+    pub sync_loading: bool,
+    /// Currently syncing account (if manual sync triggered)
+    pub syncing_account: Option<String>,
 }
 
 impl AppState {
@@ -154,6 +163,11 @@ impl AppState {
             // Selection
             selected_messages: HashSet::new(),
             show_delete_modal: false,
+
+            // Sync
+            sync_accounts: Vec::new(),
+            sync_loading: false,
+            syncing_account: None,
         }
     }
 

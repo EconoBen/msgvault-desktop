@@ -8,12 +8,14 @@ pub mod dashboard;
 pub mod message_detail;
 pub mod messages;
 pub mod search;
+pub mod sync;
 pub mod widgets;
 
 pub use aggregates::aggregates_view;
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
 pub use search::search_view;
+pub use sync::sync_view;
 
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
@@ -307,6 +309,14 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
                 state.search_total,
                 state.is_searching,
                 &state.selected_messages,
+            )
+        }
+        ViewLevel::Sync => {
+            // Show sync status view
+            sync_view(
+                &state.sync_accounts,
+                state.sync_loading,
+                state.syncing_account.as_deref(),
             )
         }
     }

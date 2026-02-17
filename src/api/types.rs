@@ -134,6 +134,56 @@ pub struct AccountsResponse {
     pub accounts: Vec<AccountInfo>,
 }
 
+/// Scheduler status for all accounts
+#[derive(Debug, Clone, Deserialize)]
+pub struct SchedulerStatus {
+    pub accounts: Vec<AccountSyncStatus>,
+}
+
+/// Sync status for a single account
+#[derive(Debug, Clone, Deserialize)]
+pub struct AccountSyncStatus {
+    pub email: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    pub status: SyncState,
+    #[serde(default)]
+    pub last_sync_at: Option<String>,
+    #[serde(default)]
+    pub next_sync_at: Option<String>,
+    #[serde(default)]
+    pub messages_synced: Option<i64>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+/// Possible sync states
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SyncState {
+    Idle,
+    Running,
+    Paused,
+    Error,
+}
+
+impl SyncState {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            SyncState::Idle => "Idle",
+            SyncState::Running => "Syncing",
+            SyncState::Paused => "Paused",
+            SyncState::Error => "Error",
+        }
+    }
+}
+
+/// Response from triggering a sync
+#[derive(Debug, Clone, Deserialize)]
+pub struct SyncTriggerResponse {
+    pub message: String,
+}
+
 /// View types for aggregation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

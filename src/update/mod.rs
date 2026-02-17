@@ -421,6 +421,86 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Sync ===
+        Message::OpenSync => {
+            state.navigation.push(ViewLevel::Sync);
+            // Immediately fetch sync status
+            Task::done(Message::FetchSyncStatus)
+        }
+
+        Message::FetchSyncStatus => {
+            state.sync_loading = true;
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.scheduler_status().await
+                },
+                Message::SyncStatusLoaded,
+            )
+        }
+
+        Message::SyncStatusLoaded(result) => {
+            state.sync_loading = false;
+            match result {
+                Ok(status) => {
+                    state.sync_accounts = status.accounts;
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::TriggerSync(email) => {
+            state.syncing_account = Some(email.clone());
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.trigger_sync(&email).await
+                },
+                Message::SyncTriggered,
+            )
+        }
+
+        Message::SyncTriggered(result) => {
+            state.syncing_account = None;
+            match result {
+                Ok(_) => {
+                    // Refresh status after triggering
+                    return Task::done(Message::FetchSyncStatus);
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::RefreshSyncStatus => {
+            // Only refresh if we're on the sync view
+            if matches!(state.navigation.current(), ViewLevel::Sync) {
+                return Task::done(Message::FetchSyncStatus);
+            }
+            Task::none()
+        }
+
         // === Selection ===
         Message::ToggleSelection => {
             // Toggle selection based on current view
@@ -786,6 +866,11 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else {
                 Task::none()
             }
+        }
+
+        // y - open sync status view (sYnc)
+        Key::Character(ref c) if c == "y" && !modifiers.shift() => {
+            Task::done(Message::OpenSync)
         }
 
         _ => Task::none(),

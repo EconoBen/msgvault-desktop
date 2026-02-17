@@ -34,6 +34,9 @@ pub enum ViewLevel {
 
     /// Search view
     Search,
+
+    /// Sync status view
+    Sync,
 }
 
 impl ViewLevel {
@@ -50,6 +53,7 @@ impl ViewLevel {
             ViewLevel::Messages { filter_description } => filter_description.clone(),
             ViewLevel::MessageDetail { message_id } => format!("Message #{}", message_id),
             ViewLevel::Search => "Search".to_string(),
+            ViewLevel::Sync => "Sync Status".to_string(),
         }
     }
 

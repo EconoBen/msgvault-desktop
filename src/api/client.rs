@@ -3,8 +3,8 @@
 //! Handles all HTTP communication with the msgvault server.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SearchResponse,
-    SortDirection, SortField, StatsResponse, ViewType,
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SchedulerStatus,
+    SearchResponse, SortDirection, SortField, StatsResponse, SyncTriggerResponse, ViewType,
 };
 use crate::error::AppError;
 use reqwest::Client;
@@ -245,6 +245,57 @@ impl ApiClient {
         })?;
 
         Ok(search)
+    }
+
+    /// Fetch scheduler status for all accounts
+    ///
+    /// Returns sync status for all configured email accounts.
+    pub async fn scheduler_status(&self) -> Result<SchedulerStatus, AppError> {
+        let response = self
+            .request(reqwest::Method::GET, "/api/v1/scheduler/status")
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let status: SchedulerStatus = response.json().await.map_err(|e| AppError::ApiError {
+            status: 0,
+            message: format!("Invalid scheduler status response: {}", e),
+        })?;
+
+        Ok(status)
+    }
+
+    /// Trigger sync for a specific account
+    ///
+    /// Starts a manual sync for the specified email account.
+    pub async fn trigger_sync(&self, email: &str) -> Result<SyncTriggerResponse, AppError> {
+        let path = format!("/api/v1/sync/{}", urlencoding::encode(email));
+
+        let response = self
+            .request(reqwest::Method::POST, &path)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let result: SyncTriggerResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid sync trigger response: {}", e),
+            })?;
+
+        Ok(result)
     }
 }
 

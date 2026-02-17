@@ -4,8 +4,8 @@
 //! The update function processes these to modify application state.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SearchResponse,
-    StatsResponse, ViewType,
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SchedulerStatus,
+    SearchResponse, StatsResponse, SyncTriggerResponse, ViewType,
 };
 use crate::error::AppError;
 use crate::model::ViewLevel;
@@ -81,6 +81,20 @@ pub enum Message {
     SelectSearchResult(usize),
     /// Open selected search result
     OpenSearchResult,
+
+    // === Sync ===
+    /// Open sync status view
+    OpenSync,
+    /// Fetch scheduler status
+    FetchSyncStatus,
+    /// Scheduler status loaded
+    SyncStatusLoaded(Result<SchedulerStatus, AppError>),
+    /// Trigger manual sync for an account
+    TriggerSync(String),
+    /// Manual sync triggered response
+    SyncTriggered(Result<SyncTriggerResponse, AppError>),
+    /// Refresh sync status (polling)
+    RefreshSyncStatus,
 
     // === Selection ===
     /// Toggle selection of current message (Space key)
