@@ -8,6 +8,7 @@ use crate::api::types::{
 };
 use crate::config::Settings;
 use crate::model::navigation::NavigationStack;
+use std::collections::HashSet;
 
 /// Connection status with the msgvault server
 #[derive(Debug, Clone, PartialEq)]
@@ -101,6 +102,12 @@ pub struct AppState {
     pub search_total: i64,
     /// Whether a search is in progress
     pub is_searching: bool,
+
+    // === Selection ===
+    /// Set of selected message IDs
+    pub selected_messages: HashSet<i64>,
+    /// Whether the delete confirmation modal is showing
+    pub show_delete_modal: bool,
 }
 
 impl AppState {
@@ -143,6 +150,10 @@ impl AppState {
             search_selected_index: 0,
             search_total: 0,
             is_searching: false,
+
+            // Selection
+            selected_messages: HashSet::new(),
+            show_delete_modal: false,
         }
     }
 

@@ -9,6 +9,7 @@ use crate::view::widgets::format_bytes;
 use chrono::{DateTime, Datelike, Local, Utc};
 use iced::widget::{column, container, row, scrollable, text, Space};
 use iced::{Element, Length};
+use std::collections::HashSet;
 
 /// Render the messages list view
 pub fn messages_view<'a>(
@@ -17,9 +18,10 @@ pub fn messages_view<'a>(
     selected_index: usize,
     offset: i64,
     total: i64,
+    selected_messages: &'a HashSet<i64>,
 ) -> Element<'a, Message> {
-    // Header with filter description
-    let header = header_row(filter_description, offset, messages.len(), total);
+    // Header with filter description and selection count
+    let header = header_row(filter_description, offset, messages.len(), total, selected_messages.len());
 
     // Column headers
     let column_headers = column_header_row();
@@ -33,7 +35,7 @@ pub fn messages_view<'a>(
         let rows: Vec<Element<'a, Message>> = messages
             .iter()
             .enumerate()
-            .map(|(i, msg)| message_row(msg, i == selected_index))
+            .map(|(i, msg)| message_row(msg, i == selected_index, selected_messages.contains(&msg.id)))
             .collect();
 
         scrollable(column(rows).spacing(2))
@@ -46,7 +48,7 @@ pub fn messages_view<'a>(
 
     // Keyboard hints
     let hints =
-        text("Up/Down: navigate | Enter: open | Esc: back | n/p: next/prev page").size(12);
+        text("Up/Down: navigate | Enter: open | Space: select | A: all | x: clear | d: delete").size(12);
 
     column![
         header,
@@ -72,8 +74,22 @@ fn header_row<'a>(
     offset: i64,
     page_count: usize,
     total: i64,
+    selection_count: usize,
 ) -> Element<'a, Message> {
     let title = text(filter_description).size(20);
+
+    let selection_info = if selection_count > 0 {
+        text(format!("{} selected", selection_count))
+            .size(12)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.palette();
+                iced::widget::text::Style {
+                    color: Some(palette.primary),
+                }
+            })
+    } else {
+        text("").size(12)
+    };
 
     let count_info = text(format!(
         "Showing {}-{} of {}",
@@ -83,13 +99,14 @@ fn header_row<'a>(
     ))
     .size(12);
 
-    row![title, Space::with_width(Length::Fill), count_info]
+    row![title, Space::with_width(Length::Fill), selection_info, Space::with_width(20), count_info]
         .align_y(iced::Alignment::Center)
         .into()
 }
 
 /// Column header row
 fn column_header_row<'a>() -> Element<'a, Message> {
+    let select_header = text("").size(12).width(Length::Fixed(24.0)); // Selection checkbox
     let subject_header = text("Subject").size(12).width(Length::FillPortion(4));
     let from_header = text("From").size(12).width(Length::FillPortion(3));
     let date_header = text("Date").size(12).width(Length::FillPortion(2));
@@ -98,6 +115,7 @@ fn column_header_row<'a>() -> Element<'a, Message> {
 
     container(
         row![
+            select_header,
             subject_header,
             from_header,
             date_header,
@@ -122,7 +140,13 @@ fn column_header_row<'a>() -> Element<'a, Message> {
 }
 
 /// Single message row
-fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Message> {
+fn message_row<'a>(msg: &'a MessageSummary, is_cursor: bool, is_checked: bool) -> Element<'a, Message> {
+    // Selection checkbox indicator
+    let checkbox_indicator = if is_checked { "[x]" } else { "[ ]" };
+    let checkbox = text(checkbox_indicator)
+        .size(14)
+        .width(Length::Fixed(24.0));
+
     let subject = text(truncate_string(&msg.subject, 50))
         .size(14)
         .width(Length::FillPortion(4));
@@ -150,11 +174,13 @@ fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Me
         .size(14)
         .width(Length::Fixed(20.0));
 
-    let row_content = row![subject, from, date, size, attach]
+    let row_content = row![checkbox, subject, from, date, size, attach]
         .spacing(10)
         .padding([8, 10]);
 
-    if is_selected {
+    // Style based on cursor position and selection state
+    let style = if is_cursor {
+        // Cursor position - highlighted
         container(row_content)
             .style(|theme: &iced::Theme| {
                 let palette = theme.palette();
@@ -164,11 +190,25 @@ fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Me
                     ..Default::default()
                 }
             })
-            .width(Length::Fill)
-            .into()
+    } else if is_checked {
+        // Selected but not cursor - subtle highlight
+        container(row_content)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.palette();
+                container::Style {
+                    background: Some(iced::Background::Color(iced::Color {
+                        a: 0.2,
+                        ..palette.primary
+                    })),
+                    ..Default::default()
+                }
+            })
     } else {
-        container(row_content).width(Length::Fill).into()
-    }
+        // Normal row
+        container(row_content)
+    };
+
+    style.width(Length::Fill).into()
 }
 
 /// Pagination info row

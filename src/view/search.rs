@@ -8,6 +8,7 @@ use crate::view::widgets::format_bytes;
 use chrono::{DateTime, Datelike, Local, Utc};
 use iced::widget::{button, column, container, row, scrollable, text, text_input, Space};
 use iced::{Element, Length};
+use std::collections::HashSet;
 
 /// Render the search view
 pub fn search_view<'a>(
@@ -17,6 +18,7 @@ pub fn search_view<'a>(
     selected_index: usize,
     total: i64,
     is_searching: bool,
+    selected_messages: &'a HashSet<i64>,
 ) -> Element<'a, Message> {
     // Search input bar
     let search_input = text_input("Search messages...", query)
@@ -72,6 +74,20 @@ pub fn search_view<'a>(
     // Column headers
     let column_headers = column_header_row();
 
+    // Selection count
+    let selection_info = if !selected_messages.is_empty() {
+        text(format!("{} selected", selected_messages.len()))
+            .size(12)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.palette();
+                iced::widget::text::Style {
+                    color: Some(palette.primary),
+                }
+            })
+    } else {
+        text("").size(12)
+    };
+
     // Results list content
     let list_content: Element<'a, Message> = if is_searching {
         container(text("Searching...").size(14))
@@ -85,7 +101,7 @@ pub fn search_view<'a>(
         let rows: Vec<Element<'a, Message>> = results
             .iter()
             .enumerate()
-            .map(|(i, msg)| message_row(msg, i == selected_index))
+            .map(|(i, msg)| message_row(msg, i == selected_index, selected_messages.contains(&msg.id)))
             .collect();
 
         scrollable(column(rows).spacing(2))
@@ -94,12 +110,12 @@ pub fn search_view<'a>(
     };
 
     // Keyboard hints
-    let hints = text("Enter: open | Tab: toggle mode | Esc: close search").size(12);
+    let hints = text("Enter: open | Tab: toggle mode | Space: select | A: all | x: clear | d: delete").size(12);
 
     column![
         search_bar,
         Space::with_height(10),
-        results_count,
+        row![results_count, Space::with_width(Length::Fill), selection_info],
         Space::with_height(10),
         column_headers,
         Space::with_height(5),
@@ -116,6 +132,7 @@ pub fn search_view<'a>(
 
 /// Column header row
 fn column_header_row<'a>() -> Element<'a, Message> {
+    let select_header = text("").size(12).width(Length::Fixed(24.0));
     let subject_header = text("Subject").size(12).width(Length::FillPortion(4));
     let from_header = text("From").size(12).width(Length::FillPortion(3));
     let date_header = text("Date").size(12).width(Length::FillPortion(2));
@@ -124,6 +141,7 @@ fn column_header_row<'a>() -> Element<'a, Message> {
 
     container(
         row![
+            select_header,
             subject_header,
             from_header,
             date_header,
@@ -148,7 +166,13 @@ fn column_header_row<'a>() -> Element<'a, Message> {
 }
 
 /// Single message row (reused pattern from messages.rs)
-fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Message> {
+fn message_row<'a>(msg: &'a MessageSummary, is_cursor: bool, is_checked: bool) -> Element<'a, Message> {
+    // Selection checkbox indicator
+    let checkbox_indicator = if is_checked { "[x]" } else { "[ ]" };
+    let checkbox = text(checkbox_indicator)
+        .size(14)
+        .width(Length::Fixed(24.0));
+
     let subject = text(truncate_string(&msg.subject, 50))
         .size(14)
         .width(Length::FillPortion(4));
@@ -176,11 +200,12 @@ fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Me
         .size(14)
         .width(Length::Fixed(20.0));
 
-    let row_content = row![subject, from, date, size, attach]
+    let row_content = row![checkbox, subject, from, date, size, attach]
         .spacing(10)
         .padding([8, 10]);
 
-    if is_selected {
+    // Style based on cursor position and selection state
+    let style = if is_cursor {
         container(row_content)
             .style(|theme: &iced::Theme| {
                 let palette = theme.palette();
@@ -190,11 +215,23 @@ fn message_row<'a>(msg: &'a MessageSummary, is_selected: bool) -> Element<'a, Me
                     ..Default::default()
                 }
             })
-            .width(Length::Fill)
-            .into()
+    } else if is_checked {
+        container(row_content)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.palette();
+                container::Style {
+                    background: Some(iced::Background::Color(iced::Color {
+                        a: 0.2,
+                        ..palette.primary
+                    })),
+                    ..Default::default()
+                }
+            })
     } else {
-        container(row_content).width(Length::Fill).into()
-    }
+        container(row_content)
+    };
+
+    style.width(Length::Fill).into()
 }
 
 /// Format a datetime for display

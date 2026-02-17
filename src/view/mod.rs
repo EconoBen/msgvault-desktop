@@ -18,7 +18,7 @@ pub use search::search_view;
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
 use dashboard::dashboard;
-use iced::widget::{button, center, column, container, row, text, text_input, Space};
+use iced::widget::{button, center, column, container, row, stack, text, text_input, Space};
 use iced::{Element, Length, Theme};
 use widgets::{breadcrumb, error, loading};
 
@@ -106,10 +106,105 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
         LoadingState::Idle => view_content(state),
     };
 
-    column![header, content]
+    let main_view: Element<'_, Message> = column![header, content]
         .width(Length::Fill)
         .height(Length::Fill)
+        .into();
+
+    // Overlay delete modal if showing
+    if state.show_delete_modal {
+        stack![
+            main_view,
+            delete_confirmation_modal(state.selected_messages.len())
+        ]
         .into()
+    } else {
+        main_view
+    }
+}
+
+/// Delete confirmation modal overlay
+fn delete_confirmation_modal(count: usize) -> Element<'static, Message> {
+    // Semi-transparent backdrop
+    let backdrop = container(Space::new(Length::Fill, Length::Fill))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme: &Theme| container::Style {
+            background: Some(iced::Background::Color(iced::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.5,
+            })),
+            ..Default::default()
+        });
+
+    // Modal dialog
+    let title = text("Confirm Delete").size(20);
+    let message = text(format!(
+        "Are you sure you want to stage {} message{} for deletion?",
+        count,
+        if count == 1 { "" } else { "s" }
+    ))
+    .size(14);
+
+    let cancel_button = button(text("Cancel").size(14))
+        .padding([8, 16])
+        .on_press(Message::HideDeleteModal);
+
+    let confirm_button = button(text("Delete").size(14))
+        .padding([8, 16])
+        .style(|theme: &iced::Theme, _status| {
+            button::Style {
+                background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.2, 0.2))),
+                text_color: iced::Color::WHITE,
+                border: iced::Border {
+                    radius: 4.0.into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }
+        })
+        .on_press(Message::ConfirmDelete);
+
+    let buttons = row![cancel_button, Space::with_width(10), confirm_button]
+        .align_y(iced::Alignment::Center);
+
+    let dialog_content = column![
+        title,
+        Space::with_height(15),
+        message,
+        Space::with_height(20),
+        buttons,
+    ]
+    .spacing(5)
+    .padding(20)
+    .align_x(iced::Alignment::Center);
+
+    let dialog = container(dialog_content)
+        .style(|theme: &Theme| {
+            let palette = theme.palette();
+            container::Style {
+                background: Some(iced::Background::Color(palette.background)),
+                border: iced::Border {
+                    radius: 8.0.into(),
+                    width: 1.0,
+                    color: iced::Color {
+                        a: 0.3,
+                        ..palette.text
+                    },
+                },
+                ..Default::default()
+            }
+        })
+        .padding(10);
+
+    // Center the dialog on the backdrop
+    stack![
+        backdrop,
+        center(dialog)
+    ]
+    .into()
 }
 
 /// Render the header with breadcrumb navigation
@@ -191,6 +286,7 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
                 state.message_selected_index,
                 state.messages_offset,
                 state.messages_total,
+                &state.selected_messages,
             )
         }
         ViewLevel::MessageDetail { .. } => {
@@ -210,6 +306,7 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
                 state.search_selected_index,
                 state.search_total,
                 state.is_searching,
+                &state.selected_messages,
             )
         }
     }

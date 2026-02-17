@@ -421,6 +421,82 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Selection ===
+        Message::ToggleSelection => {
+            // Toggle selection based on current view
+            let message_id = match state.navigation.current() {
+                ViewLevel::Messages { .. } => {
+                    state.messages.get(state.message_selected_index).map(|m| m.id)
+                }
+                ViewLevel::Search => {
+                    state.search_results.get(state.search_selected_index).map(|m| m.id)
+                }
+                _ => None,
+            };
+
+            if let Some(id) = message_id {
+                if state.selected_messages.contains(&id) {
+                    state.selected_messages.remove(&id);
+                } else {
+                    state.selected_messages.insert(id);
+                }
+            }
+            Task::none()
+        }
+
+        Message::SelectAll => {
+            // Select all visible messages based on current view
+            match state.navigation.current() {
+                ViewLevel::Messages { .. } => {
+                    for msg in &state.messages {
+                        state.selected_messages.insert(msg.id);
+                    }
+                }
+                ViewLevel::Search => {
+                    for msg in &state.search_results {
+                        state.selected_messages.insert(msg.id);
+                    }
+                }
+                _ => {}
+            }
+            Task::none()
+        }
+
+        Message::ClearSelection => {
+            state.selected_messages.clear();
+            Task::none()
+        }
+
+        Message::ShowDeleteModal => {
+            if !state.selected_messages.is_empty() {
+                state.show_delete_modal = true;
+            }
+            Task::none()
+        }
+
+        Message::HideDeleteModal => {
+            state.show_delete_modal = false;
+            Task::none()
+        }
+
+        Message::ConfirmDelete => {
+            state.show_delete_modal = false;
+            // Trigger staging for deletion
+            Task::done(Message::StageForDeletion)
+        }
+
+        Message::StageForDeletion => {
+            // TODO: Phase 6 server endpoint - POST /api/v1/deletion/stage
+            // For now, just clear selection as a placeholder
+            let count = state.selected_messages.len();
+            state.selected_messages.clear();
+            // Log to console for now (will be replaced with API call)
+            #[cfg(debug_assertions)]
+            println!("Staged {} messages for deletion", count);
+            let _ = count; // suppress unused warning in release
+            Task::none()
+        }
+
         // === Navigation ===
         Message::NavigateTo(view) => {
             let fetch_task = if let ViewLevel::Aggregates { view_type } = &view {
@@ -678,6 +754,38 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
         Key::Character(ref c) if c == "?" => {
             // TODO: Show help modal
             Task::none()
+        }
+
+        // Space - toggle selection (messages/search)
+        Key::Named(iced::keyboard::key::Named::Space) => {
+            if in_messages || in_search {
+                Task::done(Message::ToggleSelection)
+            } else {
+                Task::none()
+            }
+        }
+
+        // A (shift) - select all visible
+        Key::Character(ref c) if c == "A" && modifiers.shift() => {
+            if in_messages || in_search {
+                Task::done(Message::SelectAll)
+            } else {
+                Task::none()
+            }
+        }
+
+        // x - clear selection
+        Key::Character(ref c) if c == "x" && !modifiers.shift() => {
+            Task::done(Message::ClearSelection)
+        }
+
+        // d - show delete confirmation for selected
+        Key::Character(ref c) if c == "d" && !modifiers.shift() => {
+            if !state.selected_messages.is_empty() {
+                Task::done(Message::ShowDeleteModal)
+            } else {
+                Task::none()
+            }
         }
 
         _ => Task::none(),

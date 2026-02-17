@@ -82,6 +82,22 @@ pub enum Message {
     /// Open selected search result
     OpenSearchResult,
 
+    // === Selection ===
+    /// Toggle selection of current message (Space key)
+    ToggleSelection,
+    /// Select all visible messages (Shift+A key)
+    SelectAll,
+    /// Clear all selections (x key)
+    ClearSelection,
+    /// Show delete confirmation modal (d key)
+    ShowDeleteModal,
+    /// Hide delete confirmation modal
+    HideDeleteModal,
+    /// Confirm deletion of selected messages
+    ConfirmDelete,
+    /// Stage selected messages for deletion
+    StageForDeletion,
+
     // === Navigation ===
     /// Navigate to a specific view
     NavigateTo(ViewLevel),
