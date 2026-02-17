@@ -4,7 +4,8 @@
 //! The update function processes these to modify application state.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, StatsResponse, ViewType,
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SearchResponse,
+    StatsResponse, ViewType,
 };
 use crate::error::AppError;
 use crate::model::ViewLevel;
@@ -64,6 +65,22 @@ pub enum Message {
     PreviousMessage,
     /// Navigate to next message in list
     NextMessage,
+
+    // === Search ===
+    /// Open search view
+    OpenSearch,
+    /// Search query changed (debounced)
+    SearchQueryChanged(String),
+    /// Execute the search
+    ExecuteSearch,
+    /// Search results loaded
+    SearchLoaded(Result<SearchResponse, AppError>),
+    /// Toggle between fast/deep search mode
+    ToggleSearchMode,
+    /// Select a search result
+    SelectSearchResult(usize),
+    /// Open selected search result
+    OpenSearchResult,
 
     // === Navigation ===
     /// Navigate to a specific view

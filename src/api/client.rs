@@ -3,8 +3,8 @@
 //! Handles all HTTP communication with the msgvault server.
 
 use crate::api::types::{
-    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SortDirection,
-    SortField, StatsResponse, ViewType,
+    AggregateResponse, HealthResponse, MessageDetail, MessageListResponse, SearchResponse,
+    SortDirection, SortField, StatsResponse, ViewType,
 };
 use crate::error::AppError;
 use reqwest::Client;
@@ -182,6 +182,69 @@ impl ApiClient {
         })?;
 
         Ok(detail)
+    }
+
+    /// Fast search (subject/from only)
+    ///
+    /// Searches message subjects and sender fields for quick results.
+    pub async fn search_fast(
+        &self,
+        query: &str,
+        limit: i64,
+    ) -> Result<SearchResponse, AppError> {
+        let response = self
+            .request(reqwest::Method::GET, "/api/v1/search/fast")
+            .query(&[("q", query), ("limit", &limit.to_string())])
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let search: SearchResponse = response.json().await.map_err(|e| AppError::ApiError {
+            status: 0,
+            message: format!("Invalid search response: {}", e),
+        })?;
+
+        Ok(search)
+    }
+
+    /// Deep search (full text)
+    ///
+    /// Performs full-text search across all message content.
+    pub async fn search_deep(
+        &self,
+        query: &str,
+        offset: i64,
+        limit: i64,
+    ) -> Result<SearchResponse, AppError> {
+        let response = self
+            .request(reqwest::Method::GET, "/api/v1/search/deep")
+            .query(&[
+                ("q", query),
+                ("offset", &offset.to_string()),
+                ("limit", &limit.to_string()),
+            ])
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let search: SearchResponse = response.json().await.map_err(|e| AppError::ApiError {
+            status: 0,
+            message: format!("Invalid search response: {}", e),
+        })?;
+
+        Ok(search)
     }
 }
 

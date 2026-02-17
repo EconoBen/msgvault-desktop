@@ -7,11 +7,13 @@ pub mod aggregates;
 pub mod dashboard;
 pub mod message_detail;
 pub mod messages;
+pub mod search;
 pub mod widgets;
 
 pub use aggregates::aggregates_view;
 pub use message_detail::message_detail_view;
 pub use messages::messages_view;
+pub use search::search_view;
 
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
@@ -198,6 +200,17 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
             } else {
                 loading("Loading message...")
             }
+        }
+        ViewLevel::Search => {
+            // Show search view
+            search_view(
+                &state.search_query,
+                state.search_deep_mode,
+                &state.search_results,
+                state.search_selected_index,
+                state.search_total,
+                state.is_searching,
+            )
         }
     }
 }

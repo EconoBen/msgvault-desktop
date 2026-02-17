@@ -315,6 +315,112 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Search ===
+        Message::OpenSearch => {
+            state.navigation.push(ViewLevel::Search);
+            state.search_query.clear();
+            state.search_results.clear();
+            state.search_selected_index = 0;
+            state.search_total = 0;
+            Task::none()
+        }
+
+        Message::SearchQueryChanged(query) => {
+            state.search_query = query;
+            // Execute search if query is not empty
+            if !state.search_query.is_empty() {
+                return Task::done(Message::ExecuteSearch);
+            } else {
+                state.search_results.clear();
+                state.search_total = 0;
+            }
+            Task::none()
+        }
+
+        Message::ExecuteSearch => {
+            if state.search_query.is_empty() {
+                return Task::none();
+            }
+
+            state.is_searching = true;
+            let query = state.search_query.clone();
+            let is_deep = state.search_deep_mode;
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    if is_deep {
+                        client.search_deep(&query, 0, 50).await
+                    } else {
+                        client.search_fast(&query, 50).await
+                    }
+                },
+                Message::SearchLoaded,
+            )
+        }
+
+        Message::SearchLoaded(result) => {
+            state.is_searching = false;
+            match result {
+                Ok(response) => {
+                    state.search_results = response.messages;
+                    state.search_total = response.total;
+                    state.search_selected_index = 0;
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::ToggleSearchMode => {
+            state.search_deep_mode = !state.search_deep_mode;
+            // Re-execute search with new mode if query exists
+            if !state.search_query.is_empty() {
+                return Task::done(Message::ExecuteSearch);
+            }
+            Task::none()
+        }
+
+        Message::SelectSearchResult(index) => {
+            if index < state.search_results.len() {
+                state.search_selected_index = index;
+            }
+            Task::none()
+        }
+
+        Message::OpenSearchResult => {
+            if let Some(msg) = state.search_results.get(state.search_selected_index) {
+                let message_id = msg.id;
+                state.loading = LoadingState::Loading;
+                state.navigation.push(ViewLevel::MessageDetail { message_id });
+
+                let url = state.server_url.clone();
+                let api_key = if state.api_key.is_empty() {
+                    None
+                } else {
+                    Some(state.api_key.clone())
+                };
+
+                return Task::perform(
+                    async move {
+                        let client = ApiClient::new(url, api_key);
+                        client.message_detail(message_id).await
+                    },
+                    Message::MessageDetailLoaded,
+                );
+            }
+            Task::none()
+        }
+
         // === Navigation ===
         Message::NavigateTo(view) => {
             let fetch_task = if let ViewLevel::Aggregates { view_type } = &view {
@@ -403,6 +509,7 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
     let in_aggregates = matches!(state.navigation.current(), ViewLevel::Aggregates { .. });
     let in_messages = matches!(state.navigation.current(), ViewLevel::Messages { .. });
     let in_detail = matches!(state.navigation.current(), ViewLevel::MessageDetail { .. });
+    let in_search = matches!(state.navigation.current(), ViewLevel::Search);
 
     match key {
         // Escape - go back
@@ -414,7 +521,7 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             }
         }
 
-        // Tab - cycle view types (only in aggregates)
+        // Tab - cycle view types (aggregates) or toggle mode (search)
         Key::Named(iced::keyboard::key::Named::Tab) => {
             if in_aggregates {
                 if modifiers.shift() {
@@ -422,17 +529,21 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 } else {
                     Task::done(Message::NextViewType)
                 }
+            } else if in_search {
+                Task::done(Message::ToggleSearchMode)
             } else {
                 Task::none()
             }
         }
 
-        // Enter - drill down or open message
+        // Enter - drill down, open message, or open search result
         Key::Named(iced::keyboard::key::Named::Enter) => {
             if in_aggregates {
                 Task::done(Message::DrillDown)
             } else if in_messages {
                 Task::done(Message::OpenMessage)
+            } else if in_search {
+                Task::done(Message::OpenSearchResult)
             } else {
                 Task::none()
             }
@@ -446,6 +557,10 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 Task::done(Message::SelectMessage(
                     state.message_selected_index.saturating_sub(1),
                 ))
+            } else if in_search {
+                Task::done(Message::SelectSearchResult(
+                    state.search_selected_index.saturating_sub(1),
+                ))
             } else {
                 Task::none()
             }
@@ -457,6 +572,9 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else if in_messages {
                 let next = (state.message_selected_index + 1).min(state.messages.len().saturating_sub(1));
                 Task::done(Message::SelectMessage(next))
+            } else if in_search {
+                let next = (state.search_selected_index + 1).min(state.search_results.len().saturating_sub(1));
+                Task::done(Message::SelectSearchResult(next))
             } else {
                 Task::none()
             }
@@ -486,6 +604,9 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else if in_messages {
                 let next = (state.message_selected_index + 1).min(state.messages.len().saturating_sub(1));
                 Task::done(Message::SelectMessage(next))
+            } else if in_search {
+                let next = (state.search_selected_index + 1).min(state.search_results.len().saturating_sub(1));
+                Task::done(Message::SelectSearchResult(next))
             } else {
                 Task::none()
             }
@@ -498,9 +619,18 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 Task::done(Message::SelectMessage(
                     state.message_selected_index.saturating_sub(1),
                 ))
+            } else if in_search {
+                Task::done(Message::SelectSearchResult(
+                    state.search_selected_index.saturating_sub(1),
+                ))
             } else {
                 Task::none()
             }
+        }
+
+        // / - open search (not in search view)
+        Key::Character(ref c) if c == "/" && !in_search => {
+            Task::done(Message::OpenSearch)
         }
 
         // n/p - next/prev page in messages

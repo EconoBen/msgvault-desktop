@@ -87,6 +87,20 @@ pub struct AppState {
     pub filter_type: String,
     /// Current filter value
     pub filter_value: String,
+
+    // === Search ===
+    /// Current search query
+    pub search_query: String,
+    /// Whether deep search mode is enabled
+    pub search_deep_mode: bool,
+    /// Search results
+    pub search_results: Vec<MessageSummary>,
+    /// Selected result index
+    pub search_selected_index: usize,
+    /// Total matching results
+    pub search_total: i64,
+    /// Whether a search is in progress
+    pub is_searching: bool,
 }
 
 impl AppState {
@@ -121,6 +135,14 @@ impl AppState {
             messages_limit: 50,
             filter_type: String::new(),
             filter_value: String::new(),
+
+            // Search
+            search_query: String::new(),
+            search_deep_mode: false,
+            search_results: Vec::new(),
+            search_selected_index: 0,
+            search_total: 0,
+            is_searching: false,
         }
     }
 

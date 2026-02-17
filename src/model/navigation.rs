@@ -31,6 +31,9 @@ pub enum ViewLevel {
     MessageDetail {
         message_id: i64,
     },
+
+    /// Search view
+    Search,
 }
 
 impl ViewLevel {
@@ -46,6 +49,7 @@ impl ViewLevel {
             } => format!("{} → {}", parent_key, view_type.display_name()),
             ViewLevel::Messages { filter_description } => filter_description.clone(),
             ViewLevel::MessageDetail { message_id } => format!("Message #{}", message_id),
+            ViewLevel::Search => "Search".to_string(),
         }
     }
 
