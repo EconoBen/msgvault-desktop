@@ -3,7 +3,7 @@
 //! The Model in the MVU (Model-View-Update) pattern.
 //! Contains all application state that determines what to render.
 
-use crate::api::types::StatsResponse;
+use crate::api::types::{AggregateRow, SortDirection, SortField, StatsResponse};
 use crate::config::Settings;
 use crate::model::navigation::NavigationStack;
 
@@ -57,6 +57,16 @@ pub struct AppState {
     pub stats: Option<StatsResponse>,
     /// Loading state for current data fetch
     pub loading: LoadingState,
+
+    // === Aggregates ===
+    /// Current aggregate data
+    pub aggregates: Vec<AggregateRow>,
+    /// Currently selected row index
+    pub selected_index: usize,
+    /// Current sort field
+    pub sort_field: SortField,
+    /// Current sort direction
+    pub sort_dir: SortDirection,
 }
 
 impl AppState {
@@ -75,6 +85,12 @@ impl AppState {
             // Data
             stats: None,
             loading: LoadingState::Idle,
+
+            // Aggregates
+            aggregates: Vec::new(),
+            selected_index: 0,
+            sort_field: SortField::Count,
+            sort_dir: SortDirection::Desc,
         }
     }
 

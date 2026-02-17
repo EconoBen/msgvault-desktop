@@ -3,8 +3,11 @@
 //! The View in the MVU pattern.
 //! Renders the UI based on current application state.
 
+pub mod aggregates;
 pub mod dashboard;
 pub mod widgets;
+
+pub use aggregates::aggregates_view;
 
 use crate::message::Message;
 use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
@@ -149,28 +152,26 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
             }
         }
         ViewLevel::Aggregates { view_type } => {
-            // Placeholder for Phase 3
-            center(
-                column![
-                    text(format!("Aggregates: {}", view_type.display_name())).size(20),
-                    Space::with_height(10),
-                    text("Coming in Phase 3...").size(14),
-                ]
-                .align_x(iced::Alignment::Center),
+            // Show aggregate list view
+            aggregates_view(
+                view_type,
+                &state.aggregates,
+                state.selected_index,
+                state.sort_field,
+                state.sort_dir,
             )
-            .into()
         }
         ViewLevel::SubAggregates {
             parent_key,
             view_type,
             ..
         } => {
-            // Placeholder for Phase 3
+            // Placeholder for sub-aggregates (will use same aggregates_view with different data)
             center(
                 column![
                     text(format!("{} → {}", parent_key, view_type.display_name())).size(20),
                     Space::with_height(10),
-                    text("Coming in Phase 3...").size(14),
+                    text("Sub-aggregates coming soon...").size(14),
                 ]
                 .align_x(iced::Alignment::Center),
             )

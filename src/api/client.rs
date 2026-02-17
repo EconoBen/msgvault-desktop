@@ -2,7 +2,9 @@
 //!
 //! Handles all HTTP communication with the msgvault server.
 
-use crate::api::types::{HealthResponse, StatsResponse};
+use crate::api::types::{
+    AggregateResponse, HealthResponse, SortDirection, SortField, StatsResponse, ViewType,
+};
 use crate::error::AppError;
 use reqwest::Client;
 use std::time::Duration;
@@ -85,6 +87,40 @@ impl ApiClient {
         })?;
 
         Ok(stats)
+    }
+
+    /// Fetch aggregate data for a given view type
+    ///
+    /// Returns aggregate rows grouped by the specified view type (senders, domains, etc.)
+    pub async fn aggregates(
+        &self,
+        view_type: ViewType,
+        sort_field: SortField,
+        sort_dir: SortDirection,
+    ) -> Result<AggregateResponse, AppError> {
+        let path = format!(
+            "/api/v1/aggregates?view_type={}&sort={}&order={}",
+            view_type.as_str(),
+            sort_field.as_str(),
+            sort_dir.as_str()
+        );
+
+        let response = self.request(reqwest::Method::GET, &path).send().await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let aggregates: AggregateResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid aggregates response: {}", e),
+            })?;
+
+        Ok(aggregates)
     }
 }
 

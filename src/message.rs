@@ -3,7 +3,7 @@
 //! All user interactions and async events are represented as Messages.
 //! The update function processes these to modify application state.
 
-use crate::api::types::{HealthResponse, StatsResponse};
+use crate::api::types::{AggregateResponse, HealthResponse, StatsResponse, ViewType};
 use crate::error::AppError;
 use crate::model::ViewLevel;
 
@@ -21,6 +21,24 @@ pub enum Message {
     FetchStats,
     /// Stats loaded
     StatsLoaded(Result<StatsResponse, AppError>),
+
+    // === Aggregates ===
+    /// Fetch aggregates for current view type
+    FetchAggregates(ViewType),
+    /// Aggregates loaded
+    AggregatesLoaded(Result<AggregateResponse, AppError>),
+    /// Select an aggregate row by index
+    SelectAggregate(usize),
+    /// Move selection up
+    SelectPrevious,
+    /// Move selection down
+    SelectNext,
+    /// Drill down into selected aggregate
+    DrillDown,
+    /// Toggle sort field (name -> count -> size)
+    ToggleSortField,
+    /// Toggle sort direction
+    ToggleSortDirection,
 
     // === Navigation ===
     /// Navigate to a specific view
