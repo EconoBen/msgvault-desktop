@@ -9,7 +9,9 @@ use crate::api::types::{
 };
 use crate::config::{DiscoveryResult, DiscoveryStep, Settings};
 use crate::model::compose::ComposeState;
+use crate::model::downloads::DownloadTracker;
 use crate::model::navigation::NavigationStack;
+use crate::model::thread::ThreadState;
 use std::collections::HashSet;
 
 /// Connection status with the msgvault server
@@ -162,6 +164,14 @@ pub struct AppState {
     // === Compose ===
     /// Compose email state
     pub compose: ComposeState,
+
+    // === Downloads ===
+    /// Download state tracker for attachments
+    pub downloads: DownloadTracker,
+
+    // === Threading ===
+    /// Thread/conversation view state
+    pub thread: ThreadState,
 }
 
 /// Settings tabs
@@ -264,6 +274,12 @@ impl AppState {
 
             // Compose
             compose: ComposeState::new(),
+
+            // Downloads
+            downloads: DownloadTracker::new(),
+
+            // Threading
+            thread: ThreadState::new(),
         }
     }
 

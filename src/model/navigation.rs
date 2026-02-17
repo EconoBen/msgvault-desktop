@@ -32,6 +32,11 @@ pub enum ViewLevel {
         message_id: i64,
     },
 
+    /// Thread/conversation view showing all messages in a thread
+    Thread {
+        thread_id: String,
+    },
+
     /// Search view
     Search,
 
@@ -58,6 +63,7 @@ impl ViewLevel {
             } => format!("{} → {}", parent_key, view_type.display_name()),
             ViewLevel::Messages { filter_description } => filter_description.clone(),
             ViewLevel::MessageDetail { message_id } => format!("Message #{}", message_id),
+            ViewLevel::Thread { .. } => "Conversation".to_string(),
             ViewLevel::Search => "Search".to_string(),
             ViewLevel::Sync => "Sync Status".to_string(),
             ViewLevel::Accounts => "Accounts".to_string(),

@@ -400,6 +400,70 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        // === Threading ===
+        Message::ViewThread(thread_id) => {
+            state.thread.is_loading = true;
+            state.thread.clear();
+            state.navigation.push(ViewLevel::Thread {
+                thread_id: thread_id.clone(),
+            });
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = ApiClient::new(url, api_key);
+                    client.thread_messages(&thread_id).await
+                },
+                Message::ThreadLoaded,
+            )
+        }
+
+        Message::ThreadLoaded(result) => {
+            state.thread.is_loading = false;
+            match result {
+                Ok(messages) => {
+                    if let ViewLevel::Thread { thread_id } = state.navigation.current().clone() {
+                        state.thread.load_messages(thread_id, messages);
+                    }
+                }
+                Err(e) => {
+                    state.loading = LoadingState::Error(e.to_string());
+                }
+            }
+            Task::none()
+        }
+
+        Message::ToggleThreadMessage(index) => {
+            state.thread.toggle_expanded(index);
+            Task::none()
+        }
+
+        Message::ExpandAllThread => {
+            state.thread.expand_all();
+            Task::none()
+        }
+
+        Message::CollapseAllThread => {
+            state.thread.collapse_all();
+            Task::none()
+        }
+
+        Message::ThreadFocusPrevious => {
+            state.thread.focus_previous();
+            Task::none()
+        }
+
+        Message::ThreadFocusNext => {
+            state.thread.focus_next();
+            Task::none()
+        }
+
         // === Search ===
         Message::OpenSearch => {
             state.navigation.push(ViewLevel::Search);
@@ -1018,6 +1082,87 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
 
         Message::RetryConnection => Task::done(Message::CheckHealth),
 
+        // === Attachments ===
+        Message::DownloadAttachment {
+            message_id,
+            attachment_idx,
+            filename,
+        } => {
+            // Mark as downloading
+            state.downloads.set_downloading(message_id, attachment_idx, 0.0);
+
+            let url = state.server_url.clone();
+            let api_key = if state.api_key.is_empty() {
+                None
+            } else {
+                Some(state.api_key.clone())
+            };
+
+            Task::perform(
+                async move {
+                    let client = reqwest::Client::builder()
+                        .timeout(std::time::Duration::from_secs(300))
+                        .build()
+                        .expect("Failed to create HTTP client");
+
+                    crate::api::download_attachment(
+                        &client,
+                        &url,
+                        api_key.as_deref(),
+                        message_id,
+                        attachment_idx,
+                        &filename,
+                    )
+                    .await
+                },
+                move |result| match result {
+                    Ok(path) => Message::DownloadComplete {
+                        message_id,
+                        attachment_idx,
+                        path,
+                    },
+                    Err(e) => Message::DownloadFailed {
+                        message_id,
+                        attachment_idx,
+                        error: e.to_string(),
+                    },
+                },
+            )
+        }
+
+        Message::DownloadProgress {
+            message_id,
+            attachment_idx,
+            progress,
+        } => {
+            state.downloads.set_downloading(message_id, attachment_idx, progress);
+            Task::none()
+        }
+
+        Message::DownloadComplete {
+            message_id,
+            attachment_idx,
+            path,
+        } => {
+            state.downloads.set_complete(message_id, attachment_idx, path);
+            Task::none()
+        }
+
+        Message::DownloadFailed {
+            message_id,
+            attachment_idx,
+            error,
+        } => {
+            state.downloads.set_failed(message_id, attachment_idx, error);
+            Task::none()
+        }
+
+        Message::OpenFile(path) => {
+            // Open file with default application
+            let _ = open::that(&path);
+            Task::none()
+        }
+
         // === Compose ===
         Message::OpenCompose => {
             // Get first account email for the from field
@@ -1293,6 +1438,7 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
     let in_aggregates = matches!(state.navigation.current(), ViewLevel::Aggregates { .. });
     let in_messages = matches!(state.navigation.current(), ViewLevel::Messages { .. });
     let in_detail = matches!(state.navigation.current(), ViewLevel::MessageDetail { .. });
+    let in_thread = matches!(state.navigation.current(), ViewLevel::Thread { .. });
     let in_search = matches!(state.navigation.current(), ViewLevel::Search);
 
     match key {
@@ -1320,7 +1466,7 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             }
         }
 
-        // Enter - drill down, open message, or open search result
+        // Enter - drill down, open message, open search result, or toggle thread message
         Key::Named(iced::keyboard::key::Named::Enter) => {
             if in_aggregates {
                 Task::done(Message::DrillDown)
@@ -1328,6 +1474,9 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 Task::done(Message::OpenMessage)
             } else if in_search {
                 Task::done(Message::OpenSearchResult)
+            } else if in_thread {
+                // Toggle expand/collapse of focused message
+                Task::done(Message::ToggleThreadMessage(state.thread.focused_index))
             } else {
                 Task::none()
             }
@@ -1345,6 +1494,8 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 Task::done(Message::SelectSearchResult(
                     state.search_selected_index.saturating_sub(1),
                 ))
+            } else if in_thread {
+                Task::done(Message::ThreadFocusPrevious)
             } else {
                 Task::none()
             }
@@ -1359,6 +1510,8 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else if in_search {
                 let next = (state.search_selected_index + 1).min(state.search_results.len().saturating_sub(1));
                 Task::done(Message::SelectSearchResult(next))
+            } else if in_thread {
+                Task::done(Message::ThreadFocusNext)
             } else {
                 Task::none()
             }
@@ -1391,6 +1544,8 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else if in_search {
                 let next = (state.search_selected_index + 1).min(state.search_results.len().saturating_sub(1));
                 Task::done(Message::SelectSearchResult(next))
+            } else if in_thread {
+                Task::done(Message::ThreadFocusNext)
             } else {
                 Task::none()
             }
@@ -1407,6 +1562,8 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
                 Task::done(Message::SelectSearchResult(
                     state.search_selected_index.saturating_sub(1),
                 ))
+            } else if in_thread {
+                Task::done(Message::ThreadFocusPrevious)
             } else {
                 Task::none()
             }
@@ -1544,6 +1701,29 @@ fn handle_key_press(state: &mut AppState, key: Key, modifiers: Modifiers) -> Tas
             } else {
                 Task::none()
             }
+        }
+
+        // t - view full thread (when viewing message detail)
+        Key::Character(ref c) if c == "t" && !modifiers.shift() && in_detail => {
+            if let Some(msg) = &state.current_message {
+                if let Some(thread_id) = &msg.thread_id {
+                    Task::done(Message::ViewThread(thread_id.clone()))
+                } else {
+                    Task::none()
+                }
+            } else {
+                Task::none()
+            }
+        }
+
+        // e - expand all (in thread view)
+        Key::Character(ref c) if c == "e" && !modifiers.shift() && in_thread => {
+            Task::done(Message::ExpandAllThread)
+        }
+
+        // E (shift+e) - collapse all (in thread view)
+        Key::Character(ref c) if c == "E" && modifiers.shift() && in_thread => {
+            Task::done(Message::CollapseAllThread)
         }
 
         _ => Task::none(),

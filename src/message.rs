@@ -84,6 +84,22 @@ pub enum Message {
     /// Navigate to next message in list
     NextMessage,
 
+    // === Threading ===
+    /// View full thread for current message
+    ViewThread(String),
+    /// Thread messages loaded
+    ThreadLoaded(Result<Vec<MessageDetail>, AppError>),
+    /// Toggle expand/collapse of a thread message
+    ToggleThreadMessage(usize),
+    /// Expand all messages in thread
+    ExpandAllThread,
+    /// Collapse all messages in thread
+    CollapseAllThread,
+    /// Focus previous message in thread
+    ThreadFocusPrevious,
+    /// Focus next message in thread
+    ThreadFocusNext,
+
     // === Search ===
     /// Open search view
     OpenSearch,
@@ -145,6 +161,34 @@ pub enum Message {
     ShowHelp,
     /// Hide help modal
     HideHelp,
+
+    // === Attachments ===
+    /// Download an attachment
+    DownloadAttachment {
+        message_id: i64,
+        attachment_idx: usize,
+        filename: String,
+    },
+    /// Download progress update
+    DownloadProgress {
+        message_id: i64,
+        attachment_idx: usize,
+        progress: f32,
+    },
+    /// Download completed successfully
+    DownloadComplete {
+        message_id: i64,
+        attachment_idx: usize,
+        path: std::path::PathBuf,
+    },
+    /// Download failed
+    DownloadFailed {
+        message_id: i64,
+        attachment_idx: usize,
+        error: String,
+    },
+    /// Open a downloaded file
+    OpenFile(std::path::PathBuf),
 
     // === Compose ===
     /// Open compose for new email

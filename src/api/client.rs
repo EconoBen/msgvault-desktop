@@ -5,7 +5,7 @@
 use crate::api::types::{
     AggregateResponse, DeviceFlowStatus, HealthResponse, MessageDetail, MessageListResponse,
     OAuthInitResponse, RemoveAccountResponse, SchedulerStatus, SearchResponse, SortDirection,
-    SortField, StatsResponse, SyncTriggerResponse, ViewType,
+    SortField, StatsResponse, SyncTriggerResponse, ThreadResponse, ViewType,
 };
 use crate::error::AppError;
 use reqwest::Client;
@@ -378,6 +378,30 @@ impl ApiClient {
             })?;
 
         Ok(result)
+    }
+
+    /// Fetch all messages in a thread
+    ///
+    /// Returns all messages that belong to the specified thread, ordered chronologically.
+    pub async fn thread_messages(&self, thread_id: &str) -> Result<Vec<MessageDetail>, AppError> {
+        let path = format!("/api/v1/threads/{}", urlencoding::encode(thread_id));
+
+        let response = self.request(reqwest::Method::GET, &path).send().await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let thread_response: ThreadResponse =
+            response.json().await.map_err(|e| AppError::ApiError {
+                status: 0,
+                message: format!("Invalid thread response: {}", e),
+            })?;
+
+        Ok(thread_response.messages)
     }
 }
 

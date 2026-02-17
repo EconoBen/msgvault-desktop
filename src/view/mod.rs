@@ -5,6 +5,7 @@
 
 pub mod accounts;
 pub mod aggregates;
+pub mod attachments;
 pub mod compose;
 pub mod dashboard;
 pub mod layout;
@@ -14,6 +15,7 @@ pub mod search;
 pub mod settings;
 pub mod sidebar;
 pub mod sync;
+pub mod thread;
 pub mod widgets;
 pub mod wizard;
 
@@ -27,6 +29,7 @@ pub use search::search_view;
 pub use settings::settings_view;
 pub use sidebar::sidebar;
 pub use sync::sync_view;
+pub use thread::thread_view;
 pub use wizard::wizard_view;
 
 use crate::message::Message;
@@ -183,7 +186,7 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
             );
 
             let detail_content = if let Some(detail) = &state.current_message {
-                Some(message_detail_view(detail))
+                Some(message_detail_view(detail, &state.downloads))
             } else {
                 Some(loading("Loading message..."))
             };
@@ -443,10 +446,14 @@ fn view_content(state: &AppState) -> Element<'_, Message> {
         ViewLevel::MessageDetail { .. } => {
             // Show message detail view
             if let Some(detail) = &state.current_message {
-                message_detail_view(detail)
+                message_detail_view(detail, &state.downloads)
             } else {
                 loading("Loading message...")
             }
+        }
+        ViewLevel::Thread { .. } => {
+            // Thread/conversation view
+            thread_view(&state.thread)
         }
         ViewLevel::Search => {
             // Show search view

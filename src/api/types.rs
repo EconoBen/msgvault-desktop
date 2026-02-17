@@ -56,6 +56,9 @@ pub struct MessageSummary {
     pub has_attachments: bool,
     #[serde(default)]
     pub labels: Vec<String>,
+    /// Thread ID for conversation threading
+    #[serde(default)]
+    pub thread_id: Option<String>,
 }
 
 /// Email address with optional name
@@ -69,6 +72,9 @@ pub struct Address {
 /// Attachment metadata
 #[derive(Debug, Clone, Deserialize)]
 pub struct Attachment {
+    /// Attachment ID for download (optional, may not be present in older APIs)
+    #[serde(default)]
+    pub id: Option<String>,
     pub filename: String,
     pub mime_type: String,
     pub size_bytes: i64,
@@ -93,6 +99,9 @@ pub struct MessageDetail {
     pub labels: Vec<String>,
     #[serde(default)]
     pub attachments: Vec<Attachment>,
+    /// Thread ID for conversation threading
+    #[serde(default)]
+    pub thread_id: Option<String>,
 }
 
 /// Paginated message list response
@@ -102,6 +111,13 @@ pub struct MessageListResponse {
     pub page: i32,
     pub page_size: i32,
     pub messages: Vec<MessageSummary>,
+}
+
+/// Thread response from /api/v1/threads/{id}
+#[derive(Debug, Clone, Deserialize)]
+pub struct ThreadResponse {
+    pub thread_id: String,
+    pub messages: Vec<MessageDetail>,
 }
 
 /// Search response from /api/v1/search/*

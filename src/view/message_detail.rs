@@ -4,26 +4,27 @@
 
 use crate::api::types::MessageDetail;
 use crate::message::Message;
+use crate::model::downloads::DownloadTracker;
 use crate::theme::{colors, components, spacing, typography};
-use crate::view::widgets::{avatar, format_bytes};
+use crate::view::attachments::attachments_section;
+use crate::view::widgets::avatar;
 use chrono::{DateTime, Local, Utc};
 use iced::widget::{column, container, row, scrollable, text, Space};
 use iced::{Background, Border, Element, Length};
 
 /// Render the message detail view
-pub fn message_detail_view<'a>(message: &'a MessageDetail) -> Element<'a, Message> {
+pub fn message_detail_view<'a>(
+    message: &'a MessageDetail,
+    downloads: &'a DownloadTracker,
+) -> Element<'a, Message> {
     // Header section
     let header = header_section(message);
 
     // Body section (scrollable)
     let body = body_section(&message.body);
 
-    // Attachments section (if any)
-    let attachments = if !message.attachments.is_empty() {
-        attachments_section(message)
-    } else {
-        column![].into()
-    };
+    // Attachments section with download support
+    let attachments = attachments_section(message.id, &message.attachments, downloads);
 
     // Keyboard hints
     let hints = text("Esc: back | ←/→: prev/next message")
@@ -176,84 +177,6 @@ fn body_section<'a>(body: &'a str) -> Element<'a, Message> {
     )
     .height(Length::FillPortion(3))
     .into()
-}
-
-/// Render the attachments section
-fn attachments_section<'a>(message: &'a MessageDetail) -> Element<'a, Message> {
-    let title = text("Attachments")
-        .size(typography::SIZE_SM)
-        .style(components::text_primary);
-
-    let attachment_rows: Vec<Element<'a, Message>> = message
-        .attachments
-        .iter()
-        .map(|att| {
-            let icon = get_file_icon(&att.filename);
-            let filename = text(&att.filename)
-                .size(typography::SIZE_SM)
-                .style(components::text_secondary);
-            let size = text(format!("({})", format_bytes(att.size_bytes)))
-                .size(typography::SIZE_XS)
-                .style(components::text_muted);
-
-            container(
-                row![
-                    text(icon).size(typography::SIZE_MD),
-                    Space::with_width(spacing::SM),
-                    filename,
-                    Space::with_width(spacing::SM),
-                    size,
-                ]
-                .align_y(iced::Alignment::Center)
-            )
-            .padding([spacing::XS, spacing::SM])
-            .style(|_| container::Style {
-                background: Some(Background::Color(colors::BG_SURFACE)),
-                border: Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })
-            .into()
-        })
-        .collect();
-
-    container(
-        column![
-            title,
-            Space::with_height(spacing::SM),
-        ]
-        .push(column(attachment_rows).spacing(spacing::XS)),
-    )
-    .width(Length::Fill)
-    .padding(spacing::MD)
-    .style(|_| container::Style {
-        background: Some(Background::Color(colors::BG_ELEVATED)),
-        border: Border {
-            radius: 6.0.into(),
-            width: 1.0,
-            color: colors::BORDER_SUBTLE,
-        },
-        ..Default::default()
-    })
-    .into()
-}
-
-/// Get file icon based on extension
-fn get_file_icon(filename: &str) -> &'static str {
-    let extension = filename.rsplit('.').next().unwrap_or("").to_lowercase();
-    match extension.as_str() {
-        "pdf" => "📄",
-        "doc" | "docx" => "📝",
-        "xls" | "xlsx" => "📊",
-        "ppt" | "pptx" => "📽️",
-        "png" | "jpg" | "jpeg" | "gif" | "webp" => "🖼️",
-        "zip" | "tar" | "gz" | "rar" => "📦",
-        "mp3" | "wav" | "m4a" => "🎵",
-        "mp4" | "mov" | "avi" => "🎬",
-        _ => "📎",
-    }
 }
 
 /// Extract name from email address
