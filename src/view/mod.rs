@@ -12,6 +12,7 @@ pub mod search;
 pub mod settings;
 pub mod sync;
 pub mod widgets;
+pub mod wizard;
 
 pub use accounts::accounts_view;
 pub use aggregates::aggregates_view;
@@ -20,9 +21,10 @@ pub use messages::messages_view;
 pub use search::search_view;
 pub use settings::settings_view;
 pub use sync::sync_view;
+pub use wizard::wizard_view;
 
 use crate::message::Message;
-use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
+use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel, WizardStep};
 use crate::theme::{colors, components, spacing, typography};
 use dashboard::dashboard;
 use iced::widget::{button, center, column, container, row, stack, text, text_input, Space};
@@ -31,8 +33,18 @@ use widgets::{breadcrumb, error, loading};
 
 /// Render the application view based on current state
 pub fn render(state: &AppState) -> Element<'_, Message> {
-    let content = if state.first_run || !state.is_connected() {
-        // Show connection/setup view
+    let content = if state.first_run && state.wizard_step != WizardStep::Complete {
+        // Show wizard for first-run setup
+        wizard_view(
+            state.wizard_step,
+            state.discovering,
+            &state.discovery_steps,
+            state.discovery_result.as_ref(),
+            &state.server_url,
+            &state.api_key,
+        )
+    } else if !state.is_connected() {
+        // Show connection view (for reconnection after setup)
         connection_view(state)
     } else {
         // Show main application view

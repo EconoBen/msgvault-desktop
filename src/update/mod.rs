@@ -5,9 +5,9 @@
 
 use crate::api::types::{DeviceFlowState, SortDirection, SortField};
 use crate::api::ApiClient;
-use crate::config::Settings;
+use crate::config::{discover_server, Settings};
 use crate::message::Message;
-use crate::model::{AppState, ConnectionStatus, LoadingState, SettingsTab, ViewLevel};
+use crate::model::{AppState, ConnectionStatus, LoadingState, SettingsTab, ViewLevel, WizardStep};
 use iced::keyboard::{Key, Modifiers};
 use iced::Task;
 
@@ -16,6 +16,90 @@ use iced::Task;
 /// Returns a Task that may spawn async work (like API calls).
 pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
     match message {
+        // === Discovery ===
+        Message::StartDiscovery => {
+            state.discovering = true;
+            state.wizard_step = WizardStep::Discovering;
+
+            Task::perform(
+                async { discover_server().await },
+                Message::DiscoveryComplete,
+            )
+        }
+
+        Message::DiscoveryComplete(result) => {
+            state.discovering = false;
+            state.discovery_steps = result.steps.clone();
+
+            if result.found_server() {
+                // Found a server - show confirmation
+                state.wizard_step = WizardStep::FoundServer;
+                if let Some(url) = &result.server_url {
+                    state.server_url = url.clone();
+                }
+                if let Some(key) = &result.api_key {
+                    state.api_key = key.clone();
+                }
+            } else {
+                // No server found - show manual entry
+                state.wizard_step = WizardStep::ManualEntry;
+            }
+
+            state.discovery_result = Some(result);
+            Task::none()
+        }
+
+        Message::ConfirmDiscoveredServer => {
+            state.wizard_step = WizardStep::Complete;
+            state.first_run = false;
+
+            // Save settings and connect
+            let settings = Settings {
+                server_url: state.server_url.clone(),
+                api_key: state.api_key.clone(),
+                allow_insecure: true,
+            };
+            let _ = settings.save();
+
+            // Now connect to the server
+            Task::done(Message::CheckHealth)
+        }
+
+        Message::ChooseManualEntry => {
+            state.wizard_step = WizardStep::ManualEntry;
+            Task::none()
+        }
+
+        Message::WizardServerUrlChanged(url) => {
+            state.server_url = url;
+            Task::none()
+        }
+
+        Message::WizardApiKeyChanged(key) => {
+            state.api_key = key;
+            Task::none()
+        }
+
+        Message::FinishWizard => {
+            if state.server_url.is_empty() {
+                return Task::none();
+            }
+
+            state.wizard_step = WizardStep::Complete;
+            state.first_run = false;
+
+            // Save settings
+            let settings = Settings {
+                server_url: state.server_url.clone(),
+                api_key: state.api_key.clone(),
+                allow_insecure: true,
+            };
+            let _ = settings.save();
+
+            // Connect to the server
+            Task::done(Message::CheckHealth)
+        }
+
         // === Connection ===
         Message::CheckHealth => {
             state.connection_status = ConnectionStatus::Connecting;

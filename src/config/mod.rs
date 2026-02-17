@@ -2,6 +2,10 @@
 //!
 //! Handles loading and saving application settings.
 
+pub mod discovery;
+
+pub use discovery::{discover_server, DiscoveryResult, DiscoverySource, DiscoveryStep, DiscoveryStepStatus};
+
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;

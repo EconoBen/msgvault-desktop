@@ -27,11 +27,13 @@ impl MsgVaultApp {
             settings: settings.clone(),
         };
 
-        // Check health on startup if we have a server URL
-        let initial_task = if !settings.server_url.is_empty() {
-            Task::done(Message::CheckHealth)
+        // Determine startup behavior
+        let initial_task = if settings.server_url.is_empty() {
+            // First run - start discovery
+            Task::done(Message::StartDiscovery)
         } else {
-            Task::none()
+            // Have a server URL - check health
+            Task::done(Message::CheckHealth)
         };
 
         (app, initial_task)

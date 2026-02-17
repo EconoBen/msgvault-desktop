@@ -7,7 +7,7 @@ use crate::api::types::{
     AccountSyncStatus, AggregateRow, MessageDetail, MessageSummary, OAuthInitResponse,
     SortDirection, SortField, StatsResponse,
 };
-use crate::config::Settings;
+use crate::config::{DiscoveryResult, DiscoveryStep, Settings};
 use crate::model::navigation::NavigationStack;
 use std::collections::HashSet;
 
@@ -51,6 +51,16 @@ pub struct AppState {
     pub api_key: String,
     /// Whether this is the first run (no config exists)
     pub first_run: bool,
+
+    // === Wizard/Discovery ===
+    /// Whether we're in discovery mode (checking for server)
+    pub discovering: bool,
+    /// Discovery steps completed
+    pub discovery_steps: Vec<DiscoveryStep>,
+    /// Discovery result (after discovery completes)
+    pub discovery_result: Option<DiscoveryResult>,
+    /// Current wizard step (if in wizard mode)
+    pub wizard_step: WizardStep,
 
     // === Navigation ===
     /// Navigation stack (breadcrumbs, history)
@@ -157,15 +167,37 @@ pub enum SettingsTab {
     Display,
 }
 
+/// Wizard step for first-run setup
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WizardStep {
+    /// Discovering server automatically
+    #[default]
+    Discovering,
+    /// Found server, showing confirmation
+    FoundServer,
+    /// Manual server entry
+    ManualEntry,
+    /// Completed, ready to connect
+    Complete,
+}
+
 impl AppState {
     /// Create initial state from settings
     pub fn new(settings: &Settings) -> Self {
+        let first_run = settings.server_url.is_empty();
+
         Self {
             // Connection
             connection_status: ConnectionStatus::Unknown,
             server_url: settings.server_url.clone(),
             api_key: settings.api_key.clone(),
-            first_run: settings.server_url.is_empty(),
+            first_run,
+
+            // Wizard/Discovery
+            discovering: first_run,
+            discovery_steps: Vec::new(),
+            discovery_result: None,
+            wizard_step: if first_run { WizardStep::Discovering } else { WizardStep::Complete },
 
             // Navigation
             navigation: NavigationStack::new(),

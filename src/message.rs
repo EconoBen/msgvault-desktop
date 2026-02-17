@@ -8,12 +8,29 @@ use crate::api::types::{
     OAuthInitResponse, RemoveAccountResponse, SchedulerStatus, SearchResponse, StatsResponse,
     SyncTriggerResponse, ViewType,
 };
+use crate::config::DiscoveryResult;
 use crate::error::AppError;
 use crate::model::{SettingsTab, ViewLevel};
 
 /// All possible messages in the application
 #[derive(Debug, Clone)]
 pub enum Message {
+    // === Discovery ===
+    /// Start server discovery
+    StartDiscovery,
+    /// Discovery completed
+    DiscoveryComplete(DiscoveryResult),
+    /// User confirmed discovered server
+    ConfirmDiscoveredServer,
+    /// User chose manual entry
+    ChooseManualEntry,
+    /// Wizard server URL changed
+    WizardServerUrlChanged(String),
+    /// Wizard API key changed
+    WizardApiKeyChanged(String),
+    /// User finished wizard
+    FinishWizard,
+
     // === Connection ===
     /// Check server health on startup
     CheckHealth,
