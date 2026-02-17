@@ -59,8 +59,8 @@ impl MsgVaultApp {
     pub fn subscription(&self) -> Subscription<Message> {
         iced::event::listen().map(|event| match event {
             Event::Keyboard(keyboard::Event::KeyPressed {
-                key, modifiers: _, ..
-            }) => Message::KeyPressed(key),
+                key, modifiers, ..
+            }) => Message::KeyPressed(key, modifiers),
             _ => Message::None,
         })
     }

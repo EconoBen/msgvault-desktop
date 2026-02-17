@@ -148,6 +148,7 @@ pub enum ViewType {
 }
 
 impl ViewType {
+    /// API parameter value
     pub fn as_str(&self) -> &'static str {
         match self {
             ViewType::Senders => "senders",
@@ -158,6 +159,58 @@ impl ViewType {
             ViewType::Labels => "labels",
             ViewType::Time => "time",
         }
+    }
+
+    /// Human-readable display name
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            ViewType::Senders => "Senders",
+            ViewType::SenderNames => "Sender Names",
+            ViewType::Recipients => "Recipients",
+            ViewType::RecipientNames => "Recipient Names",
+            ViewType::Domains => "Domains",
+            ViewType::Labels => "Labels",
+            ViewType::Time => "Time",
+        }
+    }
+
+    /// Get the next view type (for Tab cycling)
+    pub fn next(&self) -> Self {
+        match self {
+            ViewType::Senders => ViewType::SenderNames,
+            ViewType::SenderNames => ViewType::Recipients,
+            ViewType::Recipients => ViewType::RecipientNames,
+            ViewType::RecipientNames => ViewType::Domains,
+            ViewType::Domains => ViewType::Labels,
+            ViewType::Labels => ViewType::Time,
+            ViewType::Time => ViewType::Senders,
+        }
+    }
+
+    /// Get the previous view type (for Shift+Tab)
+    pub fn previous(&self) -> Self {
+        match self {
+            ViewType::Senders => ViewType::Time,
+            ViewType::SenderNames => ViewType::Senders,
+            ViewType::Recipients => ViewType::SenderNames,
+            ViewType::RecipientNames => ViewType::Recipients,
+            ViewType::Domains => ViewType::RecipientNames,
+            ViewType::Labels => ViewType::Domains,
+            ViewType::Time => ViewType::Labels,
+        }
+    }
+
+    /// All view types in order
+    pub fn all() -> &'static [ViewType] {
+        &[
+            ViewType::Senders,
+            ViewType::SenderNames,
+            ViewType::Recipients,
+            ViewType::RecipientNames,
+            ViewType::Domains,
+            ViewType::Labels,
+            ViewType::Time,
+        ]
     }
 }
 

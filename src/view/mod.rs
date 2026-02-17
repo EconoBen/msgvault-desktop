@@ -3,12 +3,15 @@
 //! The View in the MVU pattern.
 //! Renders the UI based on current application state.
 
+pub mod dashboard;
 pub mod widgets;
 
 use crate::message::Message;
-use crate::model::{AppState, ConnectionStatus};
+use crate::model::{AppState, ConnectionStatus, LoadingState, ViewLevel};
+use dashboard::dashboard;
 use iced::widget::{button, center, column, container, row, text, text_input, Space};
 use iced::{Element, Length, Theme};
+use widgets::{breadcrumb, error, loading};
 
 /// Render the application view based on current state
 pub fn render(state: &AppState) -> Element<'_, Message> {
@@ -82,28 +85,122 @@ fn connection_view(state: &AppState) -> Element<'_, Message> {
     center(form).into()
 }
 
-/// Main connected view - placeholder for Phase 2
+/// Main connected view with navigation and content
 fn connected_view(state: &AppState) -> Element<'_, Message> {
-    let header = row![
-        text("msgvault").size(24),
-        Space::with_width(Length::Fill),
-        text(format!("Connected to: {}", &state.server_url)).size(12),
-    ]
-    .padding(10);
+    // Header with app title and breadcrumb
+    let header = header_view(state);
 
-    let content = center(
-        column![
-            text("Connected to msgvault server!").size(20),
-            Space::with_height(20),
-            text("Navigation and stats coming in Phase 2...").size(14),
-        ]
-        .align_x(iced::Alignment::Center),
-    );
+    // Main content based on loading state and current view
+    let content = match &state.loading {
+        LoadingState::Loading => loading("Loading..."),
+        LoadingState::Error(msg) => error(msg),
+        LoadingState::Idle => view_content(state),
+    };
 
     column![header, content]
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
+}
+
+/// Render the header with breadcrumb navigation
+fn header_view(state: &AppState) -> Element<'_, Message> {
+    let breadcrumbs = state.navigation.breadcrumbs();
+
+    let title = text("msgvault").size(24);
+
+    let breadcrumb_bar = if !breadcrumbs.is_empty() {
+        breadcrumb(breadcrumbs)
+    } else {
+        row![].into()
+    };
+
+    let server_info = text(format!("Connected: {}", &state.server_url))
+        .size(11)
+        .style(|theme: &Theme| {
+            let palette = theme.palette();
+            text::Style {
+                color: Some(iced::Color {
+                    a: 0.6,
+                    ..palette.text
+                }),
+            }
+        });
+
+    column![
+        row![title, Space::with_width(Length::Fill), server_info]
+            .align_y(iced::Alignment::Center)
+            .padding([10, 20]),
+        container(breadcrumb_bar).padding([0, 20]),
+    ]
+    .spacing(5)
+    .into()
+}
+
+/// Render content based on current view level
+fn view_content(state: &AppState) -> Element<'_, Message> {
+    match state.navigation.current() {
+        ViewLevel::Dashboard => {
+            // Show dashboard with stats if loaded
+            if let Some(stats) = &state.stats {
+                dashboard(stats)
+            } else {
+                loading("Loading statistics...")
+            }
+        }
+        ViewLevel::Aggregates { view_type } => {
+            // Placeholder for Phase 3
+            center(
+                column![
+                    text(format!("Aggregates: {}", view_type.display_name())).size(20),
+                    Space::with_height(10),
+                    text("Coming in Phase 3...").size(14),
+                ]
+                .align_x(iced::Alignment::Center),
+            )
+            .into()
+        }
+        ViewLevel::SubAggregates {
+            parent_key,
+            view_type,
+            ..
+        } => {
+            // Placeholder for Phase 3
+            center(
+                column![
+                    text(format!("{} → {}", parent_key, view_type.display_name())).size(20),
+                    Space::with_height(10),
+                    text("Coming in Phase 3...").size(14),
+                ]
+                .align_x(iced::Alignment::Center),
+            )
+            .into()
+        }
+        ViewLevel::Messages { filter_description } => {
+            // Placeholder for Phase 4
+            center(
+                column![
+                    text(format!("Messages: {}", filter_description)).size(20),
+                    Space::with_height(10),
+                    text("Coming in Phase 4...").size(14),
+                ]
+                .align_x(iced::Alignment::Center),
+            )
+            .into()
+        }
+        ViewLevel::MessageDetail { message_id } => {
+            // Placeholder for Phase 4
+            center(
+                column![
+                    text(format!("Message #{}", message_id)).size(20),
+                    Space::with_height(10),
+                    text("Coming in Phase 4...").size(14),
+                ]
+                .align_x(iced::Alignment::Center),
+            )
+            .into()
+        }
+    }
 }
 
 /// Truncate error messages for display

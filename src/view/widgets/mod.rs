@@ -2,8 +2,10 @@
 //!
 //! Custom widgets used across the application.
 
-// Widgets will be added in later phases:
-// - aggregate_row.rs (Phase 3)
-// - message_row.rs (Phase 4)
-// - breadcrumb.rs (Phase 2)
-// - loading.rs (Phase 2)
+pub mod breadcrumb;
+pub mod loading;
+pub mod stats_card;
+
+pub use breadcrumb::breadcrumb;
+pub use loading::{error, loading};
+pub use stats_card::{format_bytes, format_number, stats_card};

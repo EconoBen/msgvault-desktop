@@ -2,7 +2,7 @@
 //!
 //! Handles all HTTP communication with the msgvault server.
 
-use crate::api::types::HealthResponse;
+use crate::api::types::{HealthResponse, StatsResponse};
 use crate::error::AppError;
 use reqwest::Client;
 use std::time::Duration;
@@ -61,6 +61,30 @@ impl ApiClient {
         })?;
 
         Ok(health)
+    }
+
+    /// Fetch archive statistics
+    ///
+    /// Returns total messages, threads, accounts, labels, attachments, and database size.
+    pub async fn stats(&self) -> Result<StatsResponse, AppError> {
+        let response = self
+            .request(reqwest::Method::GET, "/api/v1/stats")
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                status: response.status().as_u16(),
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        let stats: StatsResponse = response.json().await.map_err(|e| AppError::ApiError {
+            status: 0,
+            message: format!("Invalid stats response: {}", e),
+        })?;
+
+        Ok(stats)
     }
 }
 
