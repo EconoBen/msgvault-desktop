@@ -5,7 +5,7 @@
 use crate::api::types::MessageDetail;
 use crate::message::Message;
 use crate::model::ThreadState;
-use crate::theme::{colors, components, spacing, typography};
+use crate::theme::{colors, components, icons, spacing, typography};
 use crate::view::widgets::{avatar, format_bytes};
 use chrono::{DateTime, Local, Utc};
 use iced::widget::{button, column, container, row, scrollable, text, Space};
@@ -38,9 +38,10 @@ pub fn thread_view(thread_state: &ThreadState) -> Element<'_, Message> {
     // Action buttons at the bottom
     let actions = action_buttons(thread_state);
 
-    // Keyboard hints
+    // Keyboard hints in FONT_MONO
     let hints = text("e: expand all | E: collapse all | Enter: toggle focused | j/k: navigate | Esc: back")
-        .size(typography::SIZE_XS)
+        .size(typography::SIZE_2XS)
+        .font(typography::FONT_MONO)
         .style(components::text_muted);
 
     column![
@@ -71,6 +72,7 @@ fn thread_header(thread_state: &ThreadState) -> Element<'_, Message> {
 
     let title = text(subject)
         .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
     let count_text = text(format!("{} messages in conversation", msg_count))
@@ -78,15 +80,29 @@ fn thread_header(thread_state: &ThreadState) -> Element<'_, Message> {
         .style(components::text_muted);
 
     // Expand/collapse all buttons
-    let expand_btn = button(text("Expand All").size(typography::SIZE_XS))
-        .padding([spacing::XS, spacing::SM])
-        .style(components::button_ghost)
-        .on_press(Message::ExpandAllThread);
+    let expand_btn = button(
+        row![
+            text(icons::EXPAND_ALL).size(typography::SIZE_XS),
+            Space::with_width(spacing::XS),
+            text("Expand All").size(typography::SIZE_XS),
+        ]
+        .align_y(iced::Alignment::Center),
+    )
+    .padding([spacing::XS, spacing::SM])
+    .style(components::button_ghost)
+    .on_press(Message::ExpandAllThread);
 
-    let collapse_btn = button(text("Collapse All").size(typography::SIZE_XS))
-        .padding([spacing::XS, spacing::SM])
-        .style(components::button_ghost)
-        .on_press(Message::CollapseAllThread);
+    let collapse_btn = button(
+        row![
+            text(icons::COLLAPSE).size(typography::SIZE_XS),
+            Space::with_width(spacing::XS),
+            text("Collapse All").size(typography::SIZE_XS),
+        ]
+        .align_y(iced::Alignment::Center),
+    )
+    .padding([spacing::XS, spacing::SM])
+    .style(components::button_ghost)
+    .on_press(Message::CollapseAllThread);
 
     container(
         column![
@@ -106,7 +122,7 @@ fn thread_header(thread_state: &ThreadState) -> Element<'_, Message> {
     .style(|_| container::Style {
         background: Some(Background::Color(colors::BG_ELEVATED)),
         border: Border {
-            radius: 6.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
@@ -156,8 +172,10 @@ fn collapsed_message_view(
 
     let avatar_widget = avatar(&sender_name, 32);
 
+    // Sender name in FONT_MEDIUM
     let sender = text(sender_name)
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(if is_focused {
             components::text_accent
         } else {
@@ -166,16 +184,17 @@ fn collapsed_message_view(
 
     let date = text(date_str)
         .size(typography::SIZE_XS)
+        .font(typography::FONT_MONO)
         .style(components::text_muted);
 
-    let expand_hint = text("Click to expand")
+    let expand_hint = text(icons::EXPAND)
         .size(typography::SIZE_XS)
         .style(components::text_muted);
 
     let content = row![
         avatar_widget,
         Space::with_width(spacing::SM),
-        column![sender, date].spacing(2),
+        column![sender, date].spacing(spacing::SPACE_1),
         Space::with_width(Length::Fill),
         expand_hint,
     ]
@@ -192,7 +211,7 @@ fn collapsed_message_view(
             button::Style {
                 background: Some(Background::Color(hover_bg)),
                 border: Border {
-                    radius: 6.0.into(),
+                    radius: spacing::RADIUS_MD.into(),
                     width: if is_focused { 2.0 } else { 1.0 },
                     color: border_color,
                 },
@@ -214,9 +233,10 @@ fn expanded_message_view(
     let sender_name = extract_name(&message.from_addr);
     let avatar_widget = avatar(&sender_name, 40);
 
-    // Header row
+    // Header row with FONT_MEDIUM sender name
     let sender = text(sender_name)
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(if is_focused {
             components::text_accent
         } else {
@@ -229,6 +249,7 @@ fn expanded_message_view(
 
     let date = text(format_date(&message.sent_at))
         .size(typography::SIZE_XS)
+        .font(typography::FONT_MONO)
         .style(components::text_muted);
 
     let to_label = text("To:")
@@ -240,10 +261,17 @@ fn expanded_message_view(
         .style(components::text_secondary);
 
     // Collapse button
-    let collapse_btn = button(text("Collapse").size(typography::SIZE_XS))
-        .padding([spacing::XS, spacing::SM])
-        .style(components::button_ghost)
-        .on_press(Message::ToggleThreadMessage(index));
+    let collapse_btn = button(
+        row![
+            text(icons::COLLAPSE).size(typography::SIZE_XS),
+            Space::with_width(spacing::XS),
+            text("Collapse").size(typography::SIZE_XS),
+        ]
+        .align_y(iced::Alignment::Center),
+    )
+    .padding([spacing::XS, spacing::SM])
+    .style(components::button_ghost)
+    .on_press(Message::ToggleThreadMessage(index));
 
     let header = row![
         avatar_widget,
@@ -253,7 +281,7 @@ fn expanded_message_view(
             from_email,
             row![to_label, Space::with_width(spacing::XS), to_list].align_y(iced::Alignment::Center),
         ]
-        .spacing(2),
+        .spacing(spacing::SPACE_1),
         Space::with_width(Length::Fill),
         column![date, collapse_btn].align_x(iced::Alignment::End),
     ]
@@ -283,16 +311,33 @@ fn expanded_message_view(
             .style(components::text_secondary)
     };
 
-    // Attachments (if any)
+    // Attachments (if any) -- use icons::file_icon
     let attachments_section: Element<'_, Message> = if !message.attachments.is_empty() {
         let att_list: Vec<Element<'_, Message>> = message
             .attachments
             .iter()
             .map(|att| {
-                let icon = get_file_icon(&att.filename);
+                let icon = icons::file_icon(&att.filename);
                 container(
                     row![
-                        text(icon).size(typography::SIZE_SM),
+                        container(
+                            text(icon)
+                                .size(typography::SIZE_2XS)
+                                .font(typography::FONT_MONO)
+                                .style(components::text_accent)
+                        )
+                        .padding([spacing::SPACE_1, spacing::XS])
+                        .style(|_| container::Style {
+                            background: Some(Background::Color(colors::with_alpha(
+                                colors::ACCENT_PRIMARY,
+                                0.15,
+                            ))),
+                            border: Border {
+                                radius: spacing::RADIUS_SM.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
                         Space::with_width(spacing::XS),
                         text(&att.filename)
                             .size(typography::SIZE_XS)
@@ -308,7 +353,7 @@ fn expanded_message_view(
                 .style(|_| container::Style {
                     background: Some(Background::Color(colors::BG_ELEVATED)),
                     border: Border {
-                        radius: 4.0.into(),
+                        radius: spacing::RADIUS_SM.into(),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -320,6 +365,7 @@ fn expanded_message_view(
         column![
             text("Attachments")
                 .size(typography::SIZE_XS)
+                .font(typography::FONT_MEDIUM)
                 .style(components::text_muted),
             Space::with_height(spacing::XS),
             row(att_list).spacing(spacing::XS),
@@ -340,14 +386,14 @@ fn expanded_message_view(
                         .size(typography::SIZE_XS)
                         .style(components::text_accent)
                 )
-                .padding([2, spacing::SM])
+                .padding([spacing::SPACE_1, spacing::SM])
                 .style(|_| container::Style {
                     background: Some(Background::Color(colors::with_alpha(
                         colors::ACCENT_PRIMARY,
                         0.15,
                     ))),
                     border: Border {
-                        radius: 4.0.into(),
+                        radius: spacing::RADIUS_SM.into(),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -381,7 +427,7 @@ fn expanded_message_view(
     .style(move |_| container::Style {
         background: Some(Background::Color(bg_color)),
         border: Border {
-            radius: 6.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: if is_focused { 2.0 } else { 1.0 },
             color: border_color,
         },
@@ -400,24 +446,36 @@ fn action_buttons(thread_state: &ThreadState) -> Element<'_, Message> {
         .unwrap_or(0);
 
     let reply_btn = button(
-        text("Reply")
-            .size(typography::SIZE_SM)
+        row![
+            text(icons::REPLY).size(typography::SIZE_SM),
+            Space::with_width(spacing::XS),
+            text("Reply").size(typography::SIZE_SM),
+        ]
+        .align_y(iced::Alignment::Center),
     )
     .padding([spacing::SM, spacing::LG])
     .style(components::button_primary)
     .on_press(Message::OpenReply(last_message_id));
 
     let reply_all_btn = button(
-        text("Reply All")
-            .size(typography::SIZE_SM)
+        row![
+            text(icons::REPLY_ALL).size(typography::SIZE_SM),
+            Space::with_width(spacing::XS),
+            text("Reply All").size(typography::SIZE_SM),
+        ]
+        .align_y(iced::Alignment::Center),
     )
     .padding([spacing::SM, spacing::LG])
     .style(components::button_secondary)
     .on_press(Message::OpenReplyAll(last_message_id));
 
     let forward_btn = button(
-        text("Forward")
-            .size(typography::SIZE_SM)
+        row![
+            text(icons::FORWARD).size(typography::SIZE_SM),
+            Space::with_width(spacing::XS),
+            text("Forward").size(typography::SIZE_SM),
+        ]
+        .align_y(iced::Alignment::Center),
     )
     .padding([spacing::SM, spacing::LG])
     .style(components::button_secondary)
@@ -483,20 +541,4 @@ fn extract_name(email: &str) -> String {
 fn format_date(dt: &DateTime<Utc>) -> String {
     let local: DateTime<Local> = dt.with_timezone(&Local);
     local.format("%b %d, %Y at %I:%M %p").to_string()
-}
-
-/// Get file icon based on extension
-fn get_file_icon(filename: &str) -> &'static str {
-    let extension = filename.rsplit('.').next().unwrap_or("").to_lowercase();
-    match extension.as_str() {
-        "pdf" => "PDF",
-        "doc" | "docx" => "DOC",
-        "xls" | "xlsx" => "XLS",
-        "ppt" | "pptx" => "PPT",
-        "png" | "jpg" | "jpeg" | "gif" | "webp" => "IMG",
-        "zip" | "tar" | "gz" | "rar" => "ZIP",
-        "mp3" | "wav" | "m4a" => "AUD",
-        "mp4" | "mov" | "avi" => "VID",
-        _ => "FILE",
-    }
 }

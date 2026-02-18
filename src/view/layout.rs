@@ -3,12 +3,9 @@
 //! Provides the main application layout with sidebar, message list, and detail pane.
 
 use crate::message::Message;
-use crate::theme::colors;
+use crate::theme::{colors, spacing};
 use iced::widget::{container, row};
 use iced::{Background, Border, Element, Length};
-
-/// Sidebar width in pixels
-pub const SIDEBAR_WIDTH: f32 = 220.0;
 
 /// Minimum message list width
 pub const MESSAGE_LIST_MIN_WIDTH: f32 = 350.0;
@@ -20,10 +17,10 @@ pub fn three_panel_layout<'a>(
     detail: Option<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     let sidebar_container = container(sidebar)
-        .width(Length::Fixed(SIDEBAR_WIDTH))
+        .width(Length::Fixed(spacing::SIDEBAR_WIDTH))
         .height(Length::Fill)
         .style(|_| container::Style {
-            background: Some(Background::Color(colors::BG_BASE)),
+            background: Some(Background::Color(colors::BG_DEEP)),
             border: Border {
                 width: 0.0,
                 ..Default::default()
@@ -70,10 +67,10 @@ pub fn two_panel_layout<'a>(
     content: Element<'a, Message>,
 ) -> Element<'a, Message> {
     let sidebar_container = container(sidebar)
-        .width(Length::Fixed(SIDEBAR_WIDTH))
+        .width(Length::Fixed(spacing::SIDEBAR_WIDTH))
         .height(Length::Fill)
         .style(|_| container::Style {
-            background: Some(Background::Color(colors::BG_BASE)),
+            background: Some(Background::Color(colors::BG_DEEP)),
             ..Default::default()
         });
 

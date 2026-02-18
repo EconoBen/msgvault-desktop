@@ -4,10 +4,11 @@
 
 use crate::api::types::MessageSummary;
 use crate::message::Message;
+use crate::theme::{colors, components, icons, spacing, typography};
 use crate::view::widgets::format_bytes;
 use chrono::{DateTime, Datelike, Local, Utc};
 use iced::widget::{button, column, container, row, scrollable, text, text_input, Space};
-use iced::{Element, Length};
+use iced::{Background, Border, Element, Length};
 use std::collections::HashSet;
 
 /// Render the search view
@@ -23,53 +24,52 @@ pub fn search_view<'a>(
     // Search input bar
     let search_input = text_input("Search messages...", query)
         .on_input(Message::SearchQueryChanged)
-        .padding(10)
-        .width(Length::Fill);
+        .padding(spacing::MD)
+        .width(Length::Fill)
+        .style(components::text_input_style);
 
     // Mode toggle buttons
     let fast_button = if !is_deep {
-        button(text("Fast").size(14))
-            .padding([8, 16])
-            .style(|theme: &iced::Theme, _status| {
-                let palette = theme.palette();
-                button::Style {
-                    background: Some(iced::Background::Color(palette.primary)),
-                    text_color: iced::Color::WHITE,
-                    ..Default::default()
-                }
-            })
-            .on_press(Message::ToggleSearchMode)
+        button(
+            text("Fast")
+                .size(typography::SIZE_SM)
+                .font(typography::FONT_MEDIUM),
+        )
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_primary)
+        .on_press(Message::ToggleSearchMode)
     } else {
-        button(text("Fast").size(14))
-            .padding([8, 16])
+        button(text("Fast").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_ghost)
             .on_press(Message::ToggleSearchMode)
     };
 
     let deep_button = if is_deep {
-        button(text("Deep").size(14))
-            .padding([8, 16])
-            .style(|theme: &iced::Theme, _status| {
-                let palette = theme.palette();
-                button::Style {
-                    background: Some(iced::Background::Color(palette.primary)),
-                    text_color: iced::Color::WHITE,
-                    ..Default::default()
-                }
-            })
-            .on_press(Message::ToggleSearchMode)
+        button(
+            text("Deep")
+                .size(typography::SIZE_SM)
+                .font(typography::FONT_MEDIUM),
+        )
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_primary)
+        .on_press(Message::ToggleSearchMode)
     } else {
-        button(text("Deep").size(14))
-            .padding([8, 16])
+        button(text("Deep").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_ghost)
             .on_press(Message::ToggleSearchMode)
     };
 
-    let mode_toggle = row![fast_button, deep_button].spacing(5);
+    let mode_toggle = row![fast_button, deep_button].spacing(spacing::XS);
 
-    let search_bar = row![search_input, Space::with_width(10), mode_toggle]
+    let search_bar = row![search_input, Space::with_width(spacing::MD), mode_toggle]
         .align_y(iced::Alignment::Center);
 
-    // Results count
-    let results_count = text(format!("{} results", total)).size(12);
+    // Results count in TEXT_MUTED
+    let results_count = text(format!("{} results", total))
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
 
     // Column headers
     let column_headers = column_header_row();
@@ -77,26 +77,29 @@ pub fn search_view<'a>(
     // Selection count
     let selection_info = if !selected_messages.is_empty() {
         text(format!("{} selected", selected_messages.len()))
-            .size(12)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                iced::widget::text::Style {
-                    color: Some(palette.primary),
-                }
-            })
+            .size(typography::SIZE_XS)
+            .style(components::text_accent)
     } else {
-        text("").size(12)
+        text("").size(typography::SIZE_XS)
     };
 
     // Results list content
     let list_content: Element<'a, Message> = if is_searching {
-        container(text("Searching...").size(14))
-            .padding(20)
-            .into()
+        container(
+            text("Searching...")
+                .size(typography::SIZE_SM)
+                .style(components::text_muted),
+        )
+        .padding(spacing::XL)
+        .into()
     } else if results.is_empty() {
-        container(text("No results").size(14))
-            .padding(20)
-            .into()
+        container(
+            text("No results")
+                .size(typography::SIZE_SM)
+                .style(components::text_muted),
+        )
+        .padding(spacing::XL)
+        .into()
     } else {
         let rows: Vec<Element<'a, Message>> = results
             .iter()
@@ -104,27 +107,30 @@ pub fn search_view<'a>(
             .map(|(i, msg)| message_row(msg, i == selected_index, selected_messages.contains(&msg.id)))
             .collect();
 
-        scrollable(column(rows).spacing(2))
+        scrollable(column(rows).spacing(spacing::SPACE_1))
             .height(Length::Fill)
             .into()
     };
 
-    // Keyboard hints
-    let hints = text("Enter: open | Tab: toggle mode | Space: select | A: all | x: clear | d: delete").size(12);
+    // Keyboard hints in FONT_MONO
+    let hints = text("Enter: open | Tab: toggle mode | Space: select | A: all | x: clear | d: delete")
+        .size(typography::SIZE_2XS)
+        .font(typography::FONT_MONO)
+        .style(components::text_muted);
 
     column![
         search_bar,
-        Space::with_height(10),
+        Space::with_height(spacing::MD),
         row![results_count, Space::with_width(Length::Fill), selection_info],
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         column_headers,
-        Space::with_height(5),
+        Space::with_height(spacing::XS),
         list_content,
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         hints,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
@@ -132,12 +138,32 @@ pub fn search_view<'a>(
 
 /// Column header row
 fn column_header_row<'a>() -> Element<'a, Message> {
-    let select_header = text("").size(12).width(Length::Fixed(24.0));
-    let subject_header = text("Subject").size(12).width(Length::FillPortion(4));
-    let from_header = text("From").size(12).width(Length::FillPortion(3));
-    let date_header = text("Date").size(12).width(Length::FillPortion(2));
-    let size_header = text("Size").size(12).width(Length::FillPortion(1));
-    let attach_header = text("").size(12).width(Length::Fixed(20.0));
+    let select_header = text("")
+        .size(typography::SIZE_XS)
+        .width(Length::Fixed(24.0));
+    let subject_header = text("Subject")
+        .size(typography::SIZE_XS)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_muted)
+        .width(Length::FillPortion(4));
+    let from_header = text("From")
+        .size(typography::SIZE_XS)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_muted)
+        .width(Length::FillPortion(3));
+    let date_header = text("Date")
+        .size(typography::SIZE_XS)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_muted)
+        .width(Length::FillPortion(2));
+    let size_header = text("Size")
+        .size(typography::SIZE_XS)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_muted)
+        .width(Length::FillPortion(1));
+    let attach_header = text("")
+        .size(typography::SIZE_XS)
+        .width(Length::Fixed(20.0));
 
     container(
         row![
@@ -148,18 +174,16 @@ fn column_header_row<'a>() -> Element<'a, Message> {
             size_header,
             attach_header
         ]
-        .spacing(10)
-        .padding([5, 10]),
+        .spacing(spacing::SM)
+        .padding([spacing::XS, spacing::SM]),
     )
-    .style(|theme: &iced::Theme| {
-        let palette = theme.palette();
-        container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                a: 0.1,
-                ..palette.text
-            })),
+    .style(|_| container::Style {
+        background: Some(Background::Color(colors::BG_ELEVATED)),
+        border: Border {
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
-        }
+        },
+        ..Default::default()
     })
     .width(Length::Fill)
     .into()
@@ -168,13 +192,19 @@ fn column_header_row<'a>() -> Element<'a, Message> {
 /// Single message row (reused pattern from messages.rs)
 fn message_row<'a>(msg: &'a MessageSummary, is_cursor: bool, is_checked: bool) -> Element<'a, Message> {
     // Selection checkbox indicator
-    let checkbox_indicator = if is_checked { "[x]" } else { "[ ]" };
+    let checkbox_indicator = if is_checked { icons::CHECK } else { icons::DOT_EMPTY };
     let checkbox = text(checkbox_indicator)
-        .size(14)
+        .size(typography::SIZE_SM)
+        .style(if is_checked {
+            components::text_accent
+        } else {
+            components::text_muted
+        })
         .width(Length::Fixed(24.0));
 
     let subject = text(truncate_string(&msg.subject, 50))
-        .size(14)
+        .size(typography::SIZE_SM)
+        .style(components::text_primary)
         .width(Length::FillPortion(4));
 
     let from_display = msg
@@ -184,51 +214,51 @@ fn message_row<'a>(msg: &'a MessageSummary, is_cursor: bool, is_checked: bool) -
         .map(|n| n.as_str())
         .unwrap_or(&msg.from_email);
     let from = text(truncate_string(from_display, 30))
-        .size(14)
+        .size(typography::SIZE_SM)
+        .style(components::text_secondary)
         .width(Length::FillPortion(3));
 
     let date = text(format_date(&msg.sent_at))
-        .size(14)
+        .size(typography::SIZE_XS)
+        .font(typography::FONT_MONO)
+        .style(components::text_muted)
         .width(Length::FillPortion(2));
 
     let size = text(format_bytes(msg.size_bytes))
-        .size(14)
+        .size(typography::SIZE_XS)
+        .style(components::text_muted)
         .width(Length::FillPortion(1));
 
-    let attachment_indicator = if msg.has_attachments { "📎" } else { "" };
+    let attachment_indicator = if msg.has_attachments { icons::ATTACH } else { "" };
     let attach = text(attachment_indicator)
-        .size(14)
+        .size(typography::SIZE_SM)
+        .style(components::text_muted)
         .width(Length::Fixed(20.0));
 
     let row_content = row![checkbox, subject, from, date, size, attach]
-        .spacing(10)
-        .padding([8, 10]);
+        .spacing(spacing::SM)
+        .padding([spacing::SM, spacing::SM]);
 
     // Style based on cursor position and selection state
     let style = if is_cursor {
-        container(row_content)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                container::Style {
-                    background: Some(iced::Background::Color(palette.primary)),
-                    text_color: Some(iced::Color::WHITE),
-                    ..Default::default()
-                }
-            })
+        container(row_content).style(components::selected_row_style)
     } else if is_checked {
-        container(row_content)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.palette();
-                container::Style {
-                    background: Some(iced::Background::Color(iced::Color {
-                        a: 0.2,
-                        ..palette.primary
-                    })),
-                    ..Default::default()
-                }
-            })
+        container(row_content).style(|_| container::Style {
+            background: Some(Background::Color(colors::SELECTION_BG)),
+            border: Border {
+                radius: spacing::RADIUS_MD.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
     } else {
-        container(row_content)
+        container(row_content).style(|_| container::Style {
+            border: Border {
+                radius: spacing::RADIUS_MD.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
     };
 
     style.width(Length::Fill).into()

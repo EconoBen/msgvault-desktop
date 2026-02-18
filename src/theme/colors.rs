@@ -1,144 +1,195 @@
 //! Color tokens for the design system
 //!
-//! Inspired by the Zed One Dark color palette.
-//! Colors are organized by semantic meaning rather than visual appearance.
+//! "Foundry Dark" palette — warm neutrals with copper accent.
+//! Backgrounds have a slight amber cast; text has a cool cast for contrast.
 
 use iced::Color;
 
-// === Background Hierarchy ===
-// From deepest to most elevated
+// === Background Hierarchy (warm undertone) ===
 
-/// Base background - used for the main application background
+/// Deep background — app chrome, window frame
+pub const BG_DEEP: Color = Color {
+    r: 0.102,
+    g: 0.094,
+    b: 0.086,
+    a: 1.0,
+}; // #1a1816
+
+/// Base background — primary application background
 pub const BG_BASE: Color = Color {
-    r: 0.157,
-    g: 0.173,
-    b: 0.2,
+    r: 0.129,
+    g: 0.122,
+    b: 0.110,
     a: 1.0,
-}; // #282c33
+}; // #211f1c
 
-/// Surface background - used for cards, panels, and containers
+/// Surface background — cards, panels, containers
 pub const BG_SURFACE: Color = Color {
-    r: 0.188,
-    g: 0.208,
-    b: 0.239,
+    r: 0.165,
+    g: 0.157,
+    b: 0.145,
     a: 1.0,
-}; // #303540
+}; // #2a2825
 
-/// Elevated background - used for hover states and raised elements
+/// Elevated background — hover states, raised elements
 pub const BG_ELEVATED: Color = Color {
-    r: 0.22,
-    g: 0.243,
-    b: 0.278,
+    r: 0.200,
+    g: 0.188,
+    b: 0.173,
     a: 1.0,
-}; // #383e47
+}; // #33302c
 
-/// Overlay background - used for modals, dropdowns, and tooltips
+/// Overlay background — modals, dropdowns, tooltips
 pub const BG_OVERLAY: Color = Color {
-    r: 0.251,
-    g: 0.278,
-    b: 0.318,
+    r: 0.239,
+    g: 0.224,
+    b: 0.208,
     a: 1.0,
-}; // #404751
+}; // #3d3935
 
-// === Text Hierarchy ===
+// === Text Hierarchy (cool neutral for contrast) ===
 
-/// Primary text - main content, headings, important information
+/// Primary text — headings, important content
 pub const TEXT_PRIMARY: Color = Color {
-    r: 0.863,
-    g: 0.878,
-    b: 0.898,
+    r: 0.910,
+    g: 0.894,
+    b: 0.875,
     a: 1.0,
-}; // #dce0e5
+}; // #e8e4df
 
-/// Secondary text - supporting content, descriptions
+/// Secondary text — body text, descriptions
 pub const TEXT_SECONDARY: Color = Color {
-    r: 0.671,
-    g: 0.698,
-    b: 0.737,
+    r: 0.659,
+    g: 0.635,
+    b: 0.620,
     a: 1.0,
-}; // #abb2bc
+}; // #a8a29e
 
-/// Muted text - timestamps, metadata, hints
+/// Muted text — timestamps, metadata, hints
 pub const TEXT_MUTED: Color = Color {
-    r: 0.459,
-    g: 0.494,
-    b: 0.545,
+    r: 0.420,
+    g: 0.396,
+    b: 0.376,
     a: 1.0,
-}; // #757e8b
+}; // #6b6560
 
-/// Disabled text - inactive elements, placeholders
+/// Disabled text — inactive elements, placeholders
 pub const TEXT_DISABLED: Color = Color {
-    r: 0.333,
-    g: 0.361,
-    b: 0.404,
+    r: 0.290,
+    g: 0.271,
+    b: 0.255,
     a: 1.0,
-}; // #555c67
+}; // #4a4541
 
-// === Accent Colors ===
+// === Accent: Copper ===
 
-/// Primary accent - links, focus states, primary buttons
+/// Primary accent — links, primary actions, brand color
 pub const ACCENT_PRIMARY: Color = Color {
-    r: 0.455,
-    g: 0.678,
-    b: 0.91,
+    r: 0.831,
+    g: 0.584,
+    b: 0.416,
     a: 1.0,
-}; // #74ade8
+}; // #d4956a
 
-/// Success accent - confirmation, positive actions
-pub const ACCENT_SUCCESS: Color = Color {
-    r: 0.596,
-    g: 0.765,
-    b: 0.478,
-    a: 1.0,
-}; // #98c379
-
-/// Warning accent - caution, attention needed
-pub const ACCENT_WARNING: Color = Color {
-    r: 0.906,
-    g: 0.773,
-    b: 0.424,
-    a: 1.0,
-}; // #e7c56c
-
-/// Error accent - errors, destructive actions
-pub const ACCENT_ERROR: Color = Color {
+/// Accent hover state
+pub const ACCENT_HOVER: Color = Color {
     r: 0.878,
-    g: 0.439,
-    b: 0.439,
+    g: 0.659,
+    b: 0.494,
     a: 1.0,
-}; // #e07070
+}; // #e0a87e
+
+/// Accent pressed state
+pub const ACCENT_PRESSED: Color = Color {
+    r: 0.722,
+    g: 0.490,
+    b: 0.333,
+    a: 1.0,
+}; // #b87d55
 
 // === Semantic Colors ===
 
-/// Subtle border - dividers, separators
+/// Success — confirmations, positive
+pub const ACCENT_SUCCESS: Color = Color {
+    r: 0.478,
+    g: 0.722,
+    b: 0.478,
+    a: 1.0,
+}; // #7ab87a
+
+/// Warning — caution, attention
+pub const ACCENT_WARNING: Color = Color {
+    r: 0.831,
+    g: 0.722,
+    b: 0.416,
+    a: 1.0,
+}; // #d4b86a
+
+/// Error — errors, destructive actions
+pub const ACCENT_ERROR: Color = Color {
+    r: 0.780,
+    g: 0.361,
+    b: 0.361,
+    a: 1.0,
+}; // #c75c5c
+
+/// Info — informational, threads
+pub const ACCENT_INFO: Color = Color {
+    r: 0.416,
+    g: 0.624,
+    b: 0.831,
+    a: 1.0,
+}; // #6a9fd4
+
+// === Borders ===
+
+/// Subtle border — dividers, separators
 pub const BORDER_SUBTLE: Color = Color {
     r: 1.0,
     g: 1.0,
     b: 1.0,
-    a: 0.08,
+    a: 0.06,
 };
 
-/// Visible border - input fields, card outlines
+/// Visible border — input fields, card outlines
 pub const BORDER_VISIBLE: Color = Color {
     r: 1.0,
     g: 1.0,
     b: 1.0,
-    a: 0.15,
+    a: 0.12,
 };
 
-/// Selection background - highlighted items
+/// Focus border — keyboard focus indicator
+pub const BORDER_FOCUS: Color = Color {
+    r: 0.831,
+    g: 0.584,
+    b: 0.416,
+    a: 0.6,
+};
+
+// === Selection ===
+
+/// Selection background — highlighted items
 pub const SELECTION_BG: Color = Color {
-    r: 0.455,
-    g: 0.678,
-    b: 0.91,
-    a: 0.2,
+    r: 0.831,
+    g: 0.584,
+    b: 0.416,
+    a: 0.12,
 };
 
-/// Focus ring color - keyboard focus indicator
+/// Strong selection — active selection
+pub const SELECTION_STRONG: Color = Color {
+    r: 0.831,
+    g: 0.584,
+    b: 0.416,
+    a: 0.20,
+};
+
+/// Focus ring color
 pub const FOCUS_RING: Color = Color {
-    r: 0.455,
-    g: 0.678,
-    b: 0.91,
+    r: 0.831,
+    g: 0.584,
+    b: 0.416,
     a: 0.5,
 };
 

@@ -106,17 +106,17 @@ async fn check_env_var(steps: &mut Vec<DiscoveryStep>) -> Option<DiscoveryResult
         if config_path.exists() {
             if let Ok(contents) = std::fs::read_to_string(&config_path) {
                 if let Ok(config) = toml::from_str::<MsgvaultConfig>(&contents) {
-                    if !config.server_url.is_empty() {
+                    if let Some(server_url) = config.get_server_url() {
                         // Verify the server is reachable
-                        if ping_server(&config.server_url).await {
+                        if ping_server(&server_url).await {
                             steps.push(DiscoveryStep {
                                 name: step_name,
-                                status: DiscoveryStepStatus::Found(config.server_url.clone()),
+                                status: DiscoveryStepStatus::Found(server_url.clone()),
                             });
 
                             return Some(DiscoveryResult {
-                                server_url: Some(config.server_url),
-                                api_key: config.api_key,
+                                server_url: Some(server_url),
+                                api_key: config.get_api_key(),
                                 source: DiscoverySource::EnvVar,
                                 steps: steps.clone(),
                             });
@@ -150,17 +150,17 @@ async fn check_config_files(steps: &mut Vec<DiscoveryStep>) -> Option<DiscoveryR
         if path.exists() {
             if let Ok(contents) = std::fs::read_to_string(&path) {
                 if let Ok(config) = toml::from_str::<MsgvaultConfig>(&contents) {
-                    if !config.server_url.is_empty() {
+                    if let Some(server_url) = config.get_server_url() {
                         // Verify the server is reachable
-                        if ping_server(&config.server_url).await {
+                        if ping_server(&server_url).await {
                             steps.push(DiscoveryStep {
                                 name: step_name,
-                                status: DiscoveryStepStatus::Found(config.server_url.clone()),
+                                status: DiscoveryStepStatus::Found(server_url.clone()),
                             });
 
                             return Some(DiscoveryResult {
-                                server_url: Some(config.server_url),
-                                api_key: config.api_key,
+                                server_url: Some(server_url),
+                                api_key: config.get_api_key(),
                                 source: DiscoverySource::ConfigFile(path),
                                 steps: steps.clone(),
                             });
@@ -247,7 +247,8 @@ async fn ping_server(url: &str) -> bool {
         None => return false,
     };
 
-    let health_url = format!("{}/api/v1/health", url.trim_end_matches('/'));
+    // Try /health endpoint (actual msgvault endpoint)
+    let health_url = format!("{}/health", url.trim_end_matches('/'));
 
     match client.get(&health_url).send().await {
         Ok(response) => response.status().is_success(),
@@ -256,10 +257,70 @@ async fn ping_server(url: &str) -> bool {
 }
 
 /// Msgvault config structure (for reading existing configs)
+/// Matches the actual msgvault server config format
 #[derive(Debug, serde::Deserialize)]
 struct MsgvaultConfig {
+    /// Legacy: direct server_url field
     #[serde(default)]
     server_url: String,
+    /// Legacy: direct api_key field
     #[serde(default)]
     api_key: Option<String>,
+    /// Server section (actual msgvault format)
+    #[serde(default)]
+    server: Option<ServerConfig>,
+}
+
+#[derive(Debug, serde::Deserialize, Default)]
+struct ServerConfig {
+    #[serde(default)]
+    api_port: Option<u16>,
+    #[serde(default)]
+    bind_addr: Option<String>,
+    #[serde(default)]
+    api_key: Option<String>,
+}
+
+impl MsgvaultConfig {
+    /// Get the server URL from config
+    fn get_server_url(&self) -> Option<String> {
+        // First try legacy server_url
+        if !self.server_url.is_empty() {
+            return Some(self.server_url.clone());
+        }
+
+        // Then try [server] section
+        if let Some(server) = &self.server {
+            let port = server.api_port.unwrap_or(8080);
+            let bind = server.bind_addr.as_deref().unwrap_or("127.0.0.1");
+            // Convert 0.0.0.0 or 127.0.0.1 to localhost for client access
+            let host = if bind == "0.0.0.0" || bind == "127.0.0.1" {
+                "localhost"
+            } else {
+                bind
+            };
+            return Some(format!("http://{}:{}", host, port));
+        }
+
+        None
+    }
+
+    /// Get the API key from config
+    fn get_api_key(&self) -> Option<String> {
+        // First try legacy api_key
+        if self.api_key.is_some() {
+            return self.api_key.clone();
+        }
+
+        // Then try [server] section
+        if let Some(server) = &self.server {
+            if let Some(key) = &server.api_key {
+                if !key.is_empty() {
+                    return Some(key.clone());
+                }
+            }
+        }
+
+        None
+    }
 }

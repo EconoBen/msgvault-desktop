@@ -73,16 +73,16 @@ fn get_initials(name: &str) -> String {
 
 /// Generate a consistent color from a name
 fn color_from_name(name: &str) -> Color {
-    // Color palette for avatars
+    // Warm-toned palette matching Foundry Dark design system
     let colors = [
-        Color::from_rgb(0.424, 0.549, 0.824), // Blue
-        Color::from_rgb(0.482, 0.706, 0.482), // Green
-        Color::from_rgb(0.706, 0.482, 0.706), // Purple
-        Color::from_rgb(0.824, 0.549, 0.424), // Orange
-        Color::from_rgb(0.549, 0.706, 0.706), // Teal
-        Color::from_rgb(0.706, 0.549, 0.482), // Brown
-        Color::from_rgb(0.549, 0.482, 0.706), // Indigo
-        Color::from_rgb(0.706, 0.482, 0.549), // Pink
+        Color::from_rgb(0.831, 0.584, 0.416), // Copper   #d4956a
+        Color::from_rgb(0.416, 0.624, 0.627), // Teal     #6a9fa0
+        Color::from_rgb(0.478, 0.722, 0.478), // Sage     #7ab87a
+        Color::from_rgb(0.831, 0.722, 0.416), // Amber    #d4b86a
+        Color::from_rgb(0.780, 0.361, 0.486), // Rose     #c75c7c
+        Color::from_rgb(0.416, 0.498, 0.831), // Indigo   #6a7fd4
+        Color::from_rgb(0.604, 0.478, 0.722), // Mauve    #9a7ab8
+        Color::from_rgb(0.722, 0.490, 0.333), // Sienna   #b87d55
     ];
 
     // Hash the name to get a consistent index

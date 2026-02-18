@@ -1,11 +1,12 @@
 //! Wizard view for first-run setup
 //!
 //! Shows auto-discovery progress and server configuration.
+//! Uses "Foundry Dark" design system with copper accents.
 
 use crate::config::{DiscoveryResult, DiscoverySource, DiscoveryStep, DiscoveryStepStatus};
 use crate::message::Message;
 use crate::model::WizardStep;
-use crate::theme::{colors, components, spacing, typography};
+use crate::theme::{colors, components, icons, spacing, typography};
 use iced::widget::{button, center, column, container, row, text, text_input, Space};
 use iced::{Element, Length};
 
@@ -34,21 +35,48 @@ pub fn wizard_view<'a>(
         }
     };
 
-    center(content).into()
+    // Full-screen BG_DEEP background behind the centered card
+    container(center(content))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme| container::Style {
+            background: Some(iced::Background::Color(colors::BG_DEEP)),
+            ..Default::default()
+        })
+        .into()
+}
+
+/// Logo mark: large copper diamond above the card
+fn logo_mark<'a>() -> Element<'a, Message> {
+    column![
+        // Diamond icon
+        text(icons::DIAMOND)
+            .size(typography::SIZE_3XL)
+            .style(components::text_accent),
+        Space::with_height(spacing::SM),
+        // Wordmark
+        text("msgvault")
+            .size(typography::SIZE_2XL)
+            .font(typography::FONT_SEMIBOLD)
+            .style(components::text_primary),
+        Space::with_height(spacing::XS),
+        // Tagline
+        text("Your email, your archive")
+            .size(typography::SIZE_SM)
+            .style(components::text_muted),
+    ]
+    .align_x(iced::Alignment::Center)
+    .into()
 }
 
 /// Discovering view - shows progress of auto-discovery
 fn discovering_view<'a>(steps: &'a [DiscoveryStep]) -> Element<'a, Message> {
-    let title = text("Welcome to msgvault")
-        .size(typography::SIZE_2XL)
-        .style(components::text_primary);
-
     let subtitle = text("Looking for your msgvault server...")
         .size(typography::SIZE_MD)
         .style(components::text_secondary);
 
-    // Progress indicator (simple animated dots would be nice, but text for now)
-    let progress = text("Checking...")
+    // Progress indicator
+    let progress = text(icons::DOTS)
         .size(typography::SIZE_SM)
         .style(components::text_muted);
 
@@ -59,7 +87,7 @@ fn discovering_view<'a>(steps: &'a [DiscoveryStep]) -> Element<'a, Message> {
             step_row("Config files", DiscoveryStepStatus::Checking),
             step_row("Localhost", DiscoveryStepStatus::Checking),
         ]
-        .spacing(spacing::XS)
+        .spacing(spacing::SM)
         .into()
     } else {
         let step_elements: Vec<Element<'a, Message>> = steps
@@ -67,35 +95,30 @@ fn discovering_view<'a>(steps: &'a [DiscoveryStep]) -> Element<'a, Message> {
             .map(|s| step_row(&s.name, s.status.clone()))
             .collect();
 
-        column(step_elements).spacing(spacing::XS).into()
+        column(step_elements).spacing(spacing::SM).into()
     };
 
     let card = container(
         column![
-            title,
-            Space::with_height(spacing::SM),
+            logo_mark(),
+            Space::with_height(spacing::LG),
             subtitle,
             Space::with_height(spacing::XXL),
             steps_list,
             Space::with_height(spacing::XL),
             progress,
         ]
-        .align_x(iced::Alignment::Center)
-        .spacing(spacing::XS),
+        .align_x(iced::Alignment::Center),
     )
     .style(components::card_style)
-    .padding(spacing::XXL)
-    .width(Length::Fixed(500.0));
+    .padding(spacing::XXXL)
+    .width(Length::Fixed(400.0));
 
     card.into()
 }
 
 /// Found server view - shows discovered server and confirmation
 fn found_server_view(result: &DiscoveryResult) -> Element<'static, Message> {
-    let title = text("Server Found!")
-        .size(typography::SIZE_2XL)
-        .style(components::text_primary);
-
     let server_url_str = result.server_url.clone().unwrap_or_else(|| "Unknown".to_string());
 
     let source_text = match &result.source {
@@ -109,54 +132,63 @@ fn found_server_view(result: &DiscoveryResult) -> Element<'static, Message> {
         .size(typography::SIZE_SM)
         .style(components::text_muted);
 
+    // Copper highlight on the server URL
     let server_value = text(server_url_str)
         .size(typography::SIZE_LG)
+        .font(typography::FONT_SEMIBOLD)
         .style(components::text_accent);
 
     let source_label = text(source_text)
         .size(typography::SIZE_XS)
         .style(components::text_muted);
 
-    // Buttons
-    let connect_button = button(text("Connect").size(typography::SIZE_SM))
-        .padding([spacing::SM, spacing::XL])
-        .style(components::button_primary)
-        .on_press(Message::ConfirmDiscoveredServer);
+    // Buttons: Connect = primary, Manual = ghost
+    let connect_button = button(
+        text("Connect")
+            .size(typography::SIZE_SM)
+            .font(typography::FONT_MEDIUM),
+    )
+    .padding([spacing::SM, spacing::XL])
+    .style(components::button_primary)
+    .on_press(Message::ConfirmDiscoveredServer);
 
-    let manual_button = button(text("Enter Different Server").size(typography::SIZE_SM))
-        .padding([spacing::SM, spacing::LG])
-        .style(components::button_ghost)
-        .on_press(Message::ChooseManualEntry);
+    let manual_button = button(
+        text("Enter Different Server")
+            .size(typography::SIZE_SM),
+    )
+    .padding([spacing::SM, spacing::LG])
+    .style(components::button_ghost)
+    .on_press(Message::ChooseManualEntry);
 
     let card = container(
         column![
-            title,
-            Space::with_height(spacing::XXL),
+            logo_mark(),
+            Space::with_height(spacing::XL),
+            text("Server Found!")
+                .size(typography::SIZE_LG)
+                .font(typography::FONT_SEMIBOLD)
+                .style(components::text_success),
+            Space::with_height(spacing::LG),
             server_label,
             Space::with_height(spacing::XS),
             server_value,
             Space::with_height(spacing::XS),
             source_label,
             Space::with_height(spacing::XXL),
-            row![manual_button, Space::with_width(spacing::SM), connect_button]
+            row![connect_button, Space::with_width(spacing::SM), manual_button]
                 .align_y(iced::Alignment::Center),
         ]
-        .align_x(iced::Alignment::Center)
-        .spacing(spacing::XS),
+        .align_x(iced::Alignment::Center),
     )
     .style(components::card_style)
-    .padding(spacing::XXL)
-    .width(Length::Fixed(500.0));
+    .padding(spacing::XXXL)
+    .width(Length::Fixed(400.0));
 
     card.into()
 }
 
 /// Manual entry view - form for entering server details
 fn manual_entry_view<'a>(server_url: &'a str, api_key: &'a str) -> Element<'a, Message> {
-    let title = text("Connect to Server")
-        .size(typography::SIZE_2XL)
-        .style(components::text_primary);
-
     let subtitle = text("Enter your msgvault server details")
         .size(typography::SIZE_MD)
         .style(components::text_secondary);
@@ -182,10 +214,14 @@ fn manual_entry_view<'a>(server_url: &'a str, api_key: &'a str) -> Element<'a, M
         .style(components::text_input_style)
         .secure(true);
 
-    let connect_button = button(text("Connect").size(typography::SIZE_SM))
-        .padding([spacing::SM, spacing::XL])
-        .style(components::button_primary)
-        .on_press(Message::FinishWizard);
+    let connect_button = button(
+        text("Connect")
+            .size(typography::SIZE_SM)
+            .font(typography::FONT_MEDIUM),
+    )
+    .padding([spacing::SM, spacing::XL])
+    .style(components::button_primary)
+    .on_press(Message::FinishWizard);
 
     let hint = text("Make sure your msgvault server is running")
         .size(typography::SIZE_XS)
@@ -193,8 +229,8 @@ fn manual_entry_view<'a>(server_url: &'a str, api_key: &'a str) -> Element<'a, M
 
     let card = container(
         column![
-            title,
-            Space::with_height(spacing::SM),
+            logo_mark(),
+            Space::with_height(spacing::LG),
             subtitle,
             Space::with_height(spacing::XXL),
             url_label,
@@ -209,12 +245,11 @@ fn manual_entry_view<'a>(server_url: &'a str, api_key: &'a str) -> Element<'a, M
             Space::with_height(spacing::SM),
             hint,
         ]
-        .align_x(iced::Alignment::Center)
-        .spacing(spacing::XS),
+        .align_x(iced::Alignment::Center),
     )
     .style(components::card_style)
-    .padding(spacing::XXL)
-    .width(Length::Fixed(450.0));
+    .padding(spacing::XXXL)
+    .width(Length::Fixed(400.0));
 
     card.into()
 }
@@ -222,10 +257,10 @@ fn manual_entry_view<'a>(server_url: &'a str, api_key: &'a str) -> Element<'a, M
 /// Single discovery step row
 fn step_row(name: &str, status: DiscoveryStepStatus) -> Element<'static, Message> {
     let (icon, color) = match &status {
-        DiscoveryStepStatus::Checking => ("...", colors::TEXT_MUTED),
-        DiscoveryStepStatus::Found(_) => ("✓", colors::ACCENT_SUCCESS),
-        DiscoveryStepStatus::NotFound => ("✗", colors::TEXT_MUTED),
-        DiscoveryStepStatus::Failed(_) => ("✗", colors::ACCENT_ERROR),
+        DiscoveryStepStatus::Checking => (icons::DOTS, colors::TEXT_MUTED),
+        DiscoveryStepStatus::Found(_) => (icons::CHECK, colors::ACCENT_SUCCESS),
+        DiscoveryStepStatus::NotFound => (icons::CROSS, colors::TEXT_MUTED),
+        DiscoveryStepStatus::Failed(_) => (icons::CROSS, colors::ACCENT_ERROR),
     };
 
     let icon_text = text(icon)
@@ -239,7 +274,7 @@ fn step_row(name: &str, status: DiscoveryStepStatus) -> Element<'static, Message
     let status_text: Element<'static, Message> = match status {
         DiscoveryStepStatus::Found(url) => text(url)
             .size(typography::SIZE_XS)
-            .style(components::text_muted)
+            .style(components::text_accent)
             .into(),
         DiscoveryStepStatus::Failed(err) => text(err)
             .size(typography::SIZE_XS)

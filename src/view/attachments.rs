@@ -5,7 +5,7 @@
 use crate::api::types::Attachment;
 use crate::message::Message;
 use crate::model::downloads::{DownloadState, DownloadTracker};
-use crate::theme::{colors, components, spacing, typography};
+use crate::theme::{colors, components, icons, spacing, typography};
 use crate::view::widgets::format_bytes;
 use iced::widget::{button, column, container, progress_bar, row, text, Space};
 use iced::{Background, Border, Element, Length};
@@ -22,6 +22,7 @@ pub fn attachments_section<'a>(
 
     let title = text("Attachments")
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
     let attachment_rows: Vec<Element<'a, Message>> = attachments
@@ -39,7 +40,7 @@ pub fn attachments_section<'a>(
     .style(|_| container::Style {
         background: Some(Background::Color(colors::BG_ELEVATED)),
         border: Border {
-            radius: 6.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
             color: colors::BORDER_SUBTLE,
         },
@@ -55,7 +56,29 @@ fn attachment_row<'a>(
     attachment: &'a Attachment,
     download_state: &'a DownloadState,
 ) -> Element<'a, Message> {
-    let icon = get_file_icon(&attachment.filename);
+    // File type icon from theme icons module
+    let icon_label = icons::file_icon(&attachment.filename);
+
+    // File type label in a small colored container with copper accent
+    let icon_badge = container(
+        text(icon_label)
+            .size(typography::SIZE_2XS)
+            .font(typography::FONT_MONO)
+            .style(components::text_accent),
+    )
+    .padding([spacing::SPACE_1, spacing::XS])
+    .style(|_| container::Style {
+        background: Some(Background::Color(colors::with_alpha(
+            colors::ACCENT_PRIMARY,
+            0.15,
+        ))),
+        border: Border {
+            radius: spacing::RADIUS_SM.into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
     let filename = text(&attachment.filename)
         .size(typography::SIZE_SM)
         .style(components::text_secondary);
@@ -67,8 +90,12 @@ fn attachment_row<'a>(
     let action_element: Element<'a, Message> = match download_state {
         DownloadState::NotStarted => {
             let download_btn = button(
-                text("Download")
-                    .size(typography::SIZE_XS)
+                row![
+                    text(icons::DOWNLOAD).size(typography::SIZE_XS),
+                    Space::with_width(spacing::XS),
+                    text("Download").size(typography::SIZE_XS),
+                ]
+                .align_y(iced::Alignment::Center),
             )
             .padding([spacing::XS, spacing::SM])
             .style(components::button_secondary)
@@ -83,6 +110,7 @@ fn attachment_row<'a>(
             // Show progress bar
             let progress_text = text(format!("{}%", (*progress * 100.0) as i32))
                 .size(typography::SIZE_XS)
+                .font(typography::FONT_MONO)
                 .style(components::text_muted);
 
             let bar = progress_bar(0.0..=1.0, *progress)
@@ -95,16 +123,20 @@ fn attachment_row<'a>(
                 .into()
         }
         DownloadState::Complete { path } => {
-            // Show "Open" button
+            // Show "Open" button with icon
             let open_btn = button(
-                text("Open")
-                    .size(typography::SIZE_XS)
+                row![
+                    text(icons::OPEN).size(typography::SIZE_XS),
+                    Space::with_width(spacing::XS),
+                    text("Open").size(typography::SIZE_XS),
+                ]
+                .align_y(iced::Alignment::Center),
             )
             .padding([spacing::XS, spacing::SM])
             .style(components::button_primary)
             .on_press(Message::OpenFile(path.clone()));
 
-            let status = text("Downloaded")
+            let status = text(icons::CHECK)
                 .size(typography::SIZE_XS)
                 .style(components::text_success);
 
@@ -118,17 +150,14 @@ fn attachment_row<'a>(
                 .size(typography::SIZE_XS)
                 .style(components::text_error);
 
-            let retry_btn = button(
-                text("Retry")
-                    .size(typography::SIZE_XS)
-            )
-            .padding([spacing::XS, spacing::SM])
-            .style(components::button_secondary)
-            .on_press(Message::DownloadAttachment {
-                message_id,
-                attachment_idx: idx,
-                filename: attachment.filename.clone(),
-            });
+            let retry_btn = button(text("Retry").size(typography::SIZE_XS))
+                .padding([spacing::XS, spacing::SM])
+                .style(components::button_secondary)
+                .on_press(Message::DownloadAttachment {
+                    message_id,
+                    attachment_idx: idx,
+                    filename: attachment.filename.clone(),
+                });
 
             row![error_text, Space::with_width(spacing::SM), retry_btn]
                 .align_y(iced::Alignment::Center)
@@ -138,7 +167,7 @@ fn attachment_row<'a>(
 
     container(
         row![
-            text(icon).size(typography::SIZE_MD),
+            icon_badge,
             Space::with_width(spacing::SM),
             filename,
             Space::with_width(spacing::SM),
@@ -152,33 +181,12 @@ fn attachment_row<'a>(
     .style(|_| container::Style {
         background: Some(Background::Color(colors::BG_SURFACE)),
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_SM.into(),
             ..Default::default()
         },
         ..Default::default()
     })
     .into()
-}
-
-/// Get file icon based on extension
-fn get_file_icon(filename: &str) -> &'static str {
-    let extension = filename.rsplit('.').next().unwrap_or("").to_lowercase();
-    match extension.as_str() {
-        "pdf" => "PDF",
-        "doc" | "docx" => "DOC",
-        "xls" | "xlsx" => "XLS",
-        "ppt" | "pptx" => "PPT",
-        "png" | "jpg" | "jpeg" | "gif" | "webp" => "IMG",
-        "zip" | "tar" | "gz" | "rar" => "ZIP",
-        "mp3" | "wav" | "m4a" => "AUD",
-        "mp4" | "mov" | "avi" => "VID",
-        "txt" => "TXT",
-        "csv" => "CSV",
-        "json" => "JSON",
-        "xml" => "XML",
-        "html" | "htm" => "HTML",
-        _ => "FILE",
-    }
 }
 
 /// Truncate error message for display
@@ -196,7 +204,7 @@ fn progress_bar_style() -> progress_bar::Style {
         background: Background::Color(colors::BG_SURFACE),
         bar: Background::Color(colors::ACCENT_PRIMARY),
         border: Border {
-            radius: 3.0.into(),
+            radius: spacing::RADIUS_SM.into(),
             ..Default::default()
         },
     }

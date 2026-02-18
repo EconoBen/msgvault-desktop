@@ -1,11 +1,11 @@
 //! Messages list view
 //!
-//! Displays a polished scrollable list of message summaries with avatars,
-//! unread indicators, and modern styling.
+//! Displays a 3-line message list with Foundry Dark styling.
+//! Each row shows sender + time, subject + attachment, and snippet.
 
 use crate::api::types::MessageSummary;
 use crate::message::Message;
-use crate::theme::{colors, components, spacing, typography};
+use crate::theme::{colors, components, icons, spacing, typography};
 use crate::view::widgets::{avatar, format_bytes};
 use chrono::{DateTime, Datelike, Local, Utc};
 use iced::widget::{column, container, row, scrollable, text, Space};
@@ -22,7 +22,13 @@ pub fn messages_view<'a>(
     selected_messages: &'a HashSet<i64>,
 ) -> Element<'a, Message> {
     // Header with filter description and counts
-    let header = header_section(filter_description, offset, messages.len(), total, selected_messages.len());
+    let header = header_section(
+        filter_description,
+        offset,
+        messages.len(),
+        total,
+        selected_messages.len(),
+    );
 
     // Message list
     let list_content: Element<'a, Message> = if messages.is_empty() {
@@ -48,18 +54,12 @@ pub fn messages_view<'a>(
     // Pagination and hints
     let footer = footer_section(offset, messages.len(), total);
 
-    column![
-        header,
-        Space::with_height(spacing::MD),
-        list_content,
-        Space::with_height(spacing::MD),
-        footer,
-    ]
-    .spacing(spacing::XS)
-    .padding(spacing::LG)
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
+    column![header, Space::with_height(spacing::SM), list_content, footer,]
+        .spacing(spacing::XS)
+        .padding(spacing::LG)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
 }
 
 /// Header section with title and counts
@@ -72,19 +72,23 @@ fn header_section(
 ) -> Element<'static, Message> {
     let title = text(filter_description)
         .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
     let selection_badge: Element<'static, Message> = if selection_count > 0 {
         container(
             text(format!("{} selected", selection_count))
                 .size(typography::SIZE_XS)
-                .style(components::text_accent)
+                .style(components::text_accent),
         )
         .padding([2, spacing::SM])
         .style(|_| container::Style {
-            background: Some(Background::Color(colors::with_alpha(colors::ACCENT_PRIMARY, 0.15))),
+            background: Some(Background::Color(colors::with_alpha(
+                colors::ACCENT_PRIMARY,
+                0.15,
+            ))),
             border: Border {
-                radius: 4.0.into(),
+                radius: spacing::RADIUS_SM.into(),
                 ..Default::default()
             },
             ..Default::default()
@@ -95,7 +99,7 @@ fn header_section(
     };
 
     let count_text = text(format!(
-        "{}-{} of {}",
+        "{}\u{2013}{} of {}",
         offset + 1,
         (offset + page_count as i64).min(total),
         total
@@ -118,21 +122,27 @@ fn header_section(
 fn empty_state<'a>() -> Element<'a, Message> {
     container(
         column![
-            text("No messages").size(typography::SIZE_MD).style(components::text_secondary),
+            text("No messages")
+                .size(typography::SIZE_MD)
+                .style(components::text_secondary),
             Space::with_height(spacing::XS),
             text("Try adjusting your filters")
                 .size(typography::SIZE_SM)
                 .style(components::text_muted),
         ]
-        .align_x(iced::Alignment::Center)
+        .align_x(iced::Alignment::Center),
     )
     .width(Length::Fill)
     .padding(spacing::XXL)
     .into()
 }
 
-/// Single message row with avatar and modern styling
-fn message_row<'a>(msg: &'a MessageSummary, is_focused: bool, is_selected: bool) -> Element<'a, Message> {
+/// Single message row — 3-line layout with focus/selection states
+fn message_row<'a>(
+    msg: &'a MessageSummary,
+    is_focused: bool,
+    is_selected: bool,
+) -> Element<'a, Message> {
     // Determine display name
     let display_name = msg
         .from_name
@@ -141,105 +151,115 @@ fn message_row<'a>(msg: &'a MessageSummary, is_focused: bool, is_selected: bool)
         .map(|n| n.as_str())
         .unwrap_or(&msg.from_email);
 
-    // Avatar
-    let avatar_widget = avatar(display_name, 40);
+    // Avatar (36px — slightly smaller for denser rows)
+    let avatar_widget = avatar(display_name, 36);
 
-    // Unread indicator (placeholder - would need is_unread field)
-    // TODO: Add unread indicator when is_unread field is available
-    let _unread_indicator: Element<'a, Message> = Space::with_width(spacing::XS).into();
-
-    // Selection checkbox
+    // Selection checkbox — only rendered when selected
     let checkbox: Element<'a, Message> = if is_selected {
-        container(text("✓").size(typography::SIZE_XS))
-            .width(Length::Fixed(20.0))
-            .height(Length::Fixed(20.0))
-            .style(|_| container::Style {
-                background: Some(Background::Color(colors::ACCENT_PRIMARY)),
-                border: Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
+        container(
+            text(icons::CHECK)
+                .size(typography::SIZE_XS)
+                .style(|_| iced::widget::text::Style {
+                    color: Some(iced::Color::WHITE),
+                }),
+        )
+        .width(Length::Fixed(18.0))
+        .height(Length::Fixed(18.0))
+        .center_x(Length::Fixed(18.0))
+        .center_y(Length::Fixed(18.0))
+        .style(|_| container::Style {
+            background: Some(Background::Color(colors::ACCENT_PRIMARY)),
+            border: Border {
+                radius: spacing::RADIUS_SM.into(),
                 ..Default::default()
-            })
-            .into()
+            },
+            ..Default::default()
+        })
+        .into()
     } else {
-        container(text("").size(typography::SIZE_XS))
-            .width(Length::Fixed(20.0))
-            .height(Length::Fixed(20.0))
-            .style(|_| container::Style {
-                background: Some(Background::Color(colors::BG_ELEVATED)),
-                border: Border {
-                    radius: 4.0.into(),
-                    width: 1.0,
-                    color: colors::BORDER_SUBTLE,
-                },
-                ..Default::default()
-            })
-            .into()
+        // No visible checkbox when not selected — just a spacer
+        Space::with_width(18).into()
     };
 
-    // Main content
-    let sender_name = text(truncate_string(display_name, 25))
+    // --- Line 1: Sender name + right-aligned time ---
+    let sender_name = text(truncate_string(display_name, 30))
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
-    let subject_text = text(truncate_string(&msg.subject, 60))
-        .size(typography::SIZE_SM)
-        .style(if is_focused {
-            components::text_primary
-        } else {
-            components::text_secondary
-        });
-
-    let date_text = text(format_relative_time(&msg.sent_at))
+    let time_text = text(format_relative_time(&msg.sent_at))
         .size(typography::SIZE_XS)
         .style(components::text_muted);
 
-    // Attachment indicator
-    let attachment: Element<'a, Message> = if msg.has_attachments {
-        text("📎")
+    let line1 = row![
+        sender_name,
+        Space::with_width(Length::Fill),
+        time_text,
+    ]
+    .align_y(iced::Alignment::Center);
+
+    // --- Line 2: Subject + right-aligned attachment icon ---
+    let subject_text = text(truncate_string(&msg.subject, 55))
+        .size(typography::SIZE_SM)
+        .style(components::text_secondary);
+
+    let attachment_and_size: Element<'a, Message> = if msg.has_attachments {
+        row![
+            text(icons::ATTACH)
+                .size(typography::SIZE_XS)
+                .style(components::text_muted),
+            Space::with_width(spacing::XS),
+            text(format_bytes(msg.size_bytes))
+                .size(typography::SIZE_XS)
+                .style(components::text_muted),
+        ]
+        .align_y(iced::Alignment::Center)
+        .into()
+    } else {
+        text(format_bytes(msg.size_bytes))
             .size(typography::SIZE_XS)
             .style(components::text_muted)
             .into()
-    } else {
-        Space::with_width(0).into()
     };
 
-    // Size
-    let size_text = text(format_bytes(msg.size_bytes))
+    let line2 = row![
+        subject_text,
+        Space::with_width(Length::Fill),
+        attachment_and_size,
+    ]
+    .align_y(iced::Alignment::Center);
+
+    // --- Line 3: Snippet (truncated to ~80 chars) ---
+    let snippet_str = if msg.snippet.is_empty() {
+        "\u{00A0}".to_string() // non-breaking space to preserve row height
+    } else {
+        truncate_string(&msg.snippet, 80)
+    };
+
+    let line3 = text(snippet_str)
         .size(typography::SIZE_XS)
         .style(components::text_muted);
 
-    // Content layout
-    let content = column![
-        row![
-            sender_name,
-            Space::with_width(Length::Fill),
-            date_text,
-        ].align_y(iced::Alignment::Center),
-        Space::with_height(2),
-        row![
-            subject_text,
-            Space::with_width(Length::Fill),
-            attachment,
-            Space::with_width(spacing::SM),
-            size_text,
-        ].align_y(iced::Alignment::Center),
-    ]
-    .width(Length::Fill);
+    // 3-line content column
+    let content = column![line1, line2, line3,]
+        .spacing(1)
+        .width(Length::Fill);
 
-    // Row layout
+    // Row layout: checkbox + avatar + content
     let row_content = row![
         checkbox,
         Space::with_width(spacing::SM),
         avatar_widget,
-        Space::with_width(spacing::MD),
+        Space::with_width(spacing::SM),
         content,
     ]
     .align_y(iced::Alignment::Center)
-    .padding([spacing::SM, spacing::MD]);
+    .padding([spacing::SPACE_3, spacing::MD]);
 
-    // Apply styling based on state
+    // --- Styling based on state ---
+    // Focused: copper left border + selection bg
+    // Selected: subtle copper tint (8% alpha)
+    // Default: surface bg
     let bg_color = if is_focused {
         colors::SELECTION_BG
     } else if is_selected {
@@ -248,17 +268,47 @@ fn message_row<'a>(msg: &'a MessageSummary, is_focused: bool, is_selected: bool)
         colors::BG_SURFACE
     };
 
-    container(row_content)
+    let left_border_width: f32 = if is_focused { 2.0 } else { 0.0 };
+    let left_border_color = if is_focused {
+        colors::ACCENT_PRIMARY
+    } else {
+        iced::Color::TRANSPARENT
+    };
+
+    // Use a nested container approach: outer provides left border, inner provides content
+    if is_focused {
+        // Focused row: left copper border + SELECTION_BG
+        container(
+            container(row_content)
+                .width(Length::Fill)
+                .style(move |_| container::Style {
+                    background: Some(Background::Color(bg_color)),
+                    ..Default::default()
+                }),
+        )
         .width(Length::Fill)
         .style(move |_| container::Style {
-            background: Some(Background::Color(bg_color)),
             border: Border {
-                radius: 4.0.into(),
-                ..Default::default()
+                radius: spacing::RADIUS_MD.into(),
+                width: left_border_width,
+                color: left_border_color,
             },
             ..Default::default()
         })
         .into()
+    } else {
+        container(row_content)
+            .width(Length::Fill)
+            .style(move |_| container::Style {
+                background: Some(Background::Color(bg_color)),
+                border: Border {
+                    radius: spacing::RADIUS_MD.into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .into()
+    }
 }
 
 /// Footer with pagination and keyboard hints
@@ -266,13 +316,14 @@ fn footer_section(offset: i64, _page_count: usize, total: i64) -> Element<'stati
     let pagination = text(format!(
         "Page {} of {}",
         (offset / 50) + 1,
-        (total / 50) + 1
+        ((total.max(1) - 1) / 50) + 1
     ))
     .size(typography::SIZE_XS)
     .style(components::text_muted);
 
-    let hints = text("j/k: navigate • Enter: open • Space: select • d: delete • n/p: pages")
-        .size(typography::SIZE_XS)
+    let hints = text("j/k navigate  Enter open  Space select  d delete  n/p pages")
+        .size(typography::SIZE_2XS)
+        .font(typography::FONT_MONO)
         .style(components::text_muted);
 
     row![
@@ -317,9 +368,10 @@ fn format_relative_time(dt: &DateTime<Utc>) -> String {
 
 /// Truncate a string with ellipsis
 fn truncate_string(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
+    if s.chars().count() <= max_len {
         s.to_string()
     } else {
-        format!("{}...", &s[..max_len.saturating_sub(3)])
+        let truncated: String = s.chars().take(max_len.saturating_sub(1)).collect();
+        format!("{}\u{2026}", truncated)
     }
 }

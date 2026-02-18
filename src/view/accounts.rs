@@ -4,8 +4,10 @@
 
 use crate::api::types::{AccountSyncStatus, OAuthInitResponse};
 use crate::message::Message;
+use crate::theme::{colors, components, icons, spacing, typography};
+use crate::view::widgets::avatar;
 use iced::widget::{button, column, container, row, scrollable, text, text_input, Space};
-use iced::{Element, Length, Theme};
+use iced::{Background, Border, Element, Length, Theme};
 
 /// Render the accounts view
 pub fn accounts_view<'a>(
@@ -18,45 +20,59 @@ pub fn accounts_view<'a>(
     removing_account: Option<&'a str>,
 ) -> Element<'a, Message> {
     // Header
-    let title = text("Accounts").size(24);
+    let title = text("Accounts")
+        .size(typography::SIZE_XL)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
 
     // Add account section
     let add_section = add_account_section(add_email, adding_account, oauth_response);
 
     // Account list
     let account_list: Element<'a, Message> = if is_loading && accounts.is_empty() {
-        container(text("Loading accounts...").size(14))
-            .padding(20)
-            .into()
+        container(
+            text("Loading accounts...")
+                .size(typography::SIZE_SM)
+                .style(components::text_muted),
+        )
+        .padding(spacing::XL)
+        .into()
     } else if accounts.is_empty() {
-        container(text("No accounts configured. Add one below.").size(14))
-            .padding(20)
-            .into()
+        container(
+            text("No accounts configured. Add one below.")
+                .size(typography::SIZE_SM)
+                .style(components::text_muted),
+        )
+        .padding(spacing::XL)
+        .into()
     } else {
         let account_rows: Vec<Element<'a, Message>> = accounts
             .iter()
             .map(account_row)
             .collect();
 
-        scrollable(column(account_rows).spacing(10))
+        scrollable(column(account_rows).spacing(spacing::SM))
             .height(Length::Fill)
             .into()
     };
 
-    // Keyboard hints
-    let hints = text("a: add account | Esc: back").size(12);
+    // Keyboard hints in FONT_MONO
+    let hints = text("a: add account | Esc: back")
+        .size(typography::SIZE_2XS)
+        .font(typography::FONT_MONO)
+        .style(components::text_muted);
 
     let main_content: Element<'a, Message> = column![
         title,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         account_list,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         add_section,
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         hints,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .height(Length::Fill)
     .into();
@@ -83,7 +99,10 @@ fn add_account_section<'a>(
     adding: bool,
     oauth_response: Option<&'a OAuthInitResponse>,
 ) -> Element<'a, Message> {
-    let section_title = text("Add Account").size(18);
+    let section_title = text("Add Account")
+        .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
 
     // Show device flow UI if we have that response
     if let Some(oauth) = oauth_response {
@@ -97,17 +116,20 @@ fn add_account_section<'a>(
         return container(
             column![
                 section_title,
-                Space::with_height(10),
-                text("Initiating OAuth...").size(14),
-                Space::with_height(10),
-                button(text("Cancel").size(14))
-                    .padding([8, 16])
+                Space::with_height(spacing::SM),
+                text("Initiating OAuth...")
+                    .size(typography::SIZE_SM)
+                    .style(components::text_muted),
+                Space::with_height(spacing::SM),
+                button(text("Cancel").size(typography::SIZE_SM))
+                    .padding([spacing::SM, spacing::LG])
+                    .style(components::button_secondary)
                     .on_press(Message::CancelAddAccount),
             ]
-            .spacing(5),
+            .spacing(spacing::XS),
         )
         .style(section_style)
-        .padding(15)
+        .padding(spacing::LG)
         .width(Length::Fill)
         .into();
     }
@@ -115,35 +137,42 @@ fn add_account_section<'a>(
     // Normal add account form
     let email_input = text_input("Email address (e.g., user@gmail.com)", email)
         .on_input(Message::AddAccountEmailChanged)
-        .padding(10)
-        .width(Length::Fill);
+        .padding(spacing::MD)
+        .width(Length::Fill)
+        .style(components::text_input_style);
 
     let add_button = if email.is_empty() {
-        button(text("Add Account").size(14)).padding([8, 16])
+        button(text("Add Account").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_primary)
     } else {
-        button(text("Add Account").size(14))
-            .padding([8, 16])
+        button(text("Add Account").size(typography::SIZE_SM))
+            .padding([spacing::SM, spacing::LG])
+            .style(components::button_primary)
             .on_press(Message::StartAddAccount)
     };
 
     container(
         column![
             section_title,
-            Space::with_height(10),
-            row![email_input, Space::with_width(10), add_button]
+            Space::with_height(spacing::SM),
+            row![email_input, Space::with_width(spacing::SM), add_button]
                 .align_y(iced::Alignment::Center),
         ]
-        .spacing(5),
+        .spacing(spacing::XS),
     )
     .style(section_style)
-    .padding(15)
+    .padding(spacing::LG)
     .width(Length::Fill)
     .into()
 }
 
 /// Device flow section showing code and verification URL
 fn device_flow_section<'a>(oauth: &'a OAuthInitResponse) -> Element<'a, Message> {
-    let title = text("Device Authorization").size(18);
+    let title = text("Device Authorization")
+        .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
 
     let code = oauth
         .user_code
@@ -157,50 +186,55 @@ fn device_flow_section<'a>(oauth: &'a OAuthInitResponse) -> Element<'a, Message>
         .unwrap_or("");
 
     let code_display = text(code)
-        .size(32)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            iced::widget::text::Style {
-                color: Some(palette.primary),
-            }
-        });
+        .size(typography::SIZE_2XL)
+        .font(typography::FONT_MONO)
+        .style(components::text_accent);
 
     let instructions = column![
-        text("Enter this code at:").size(14),
-        text(url).size(14),
-        Space::with_height(10),
-        text("Waiting for authorization...").size(12),
+        text("Enter this code at:")
+            .size(typography::SIZE_SM)
+            .style(components::text_secondary),
+        text(url)
+            .size(typography::SIZE_SM)
+            .font(typography::FONT_MONO)
+            .style(components::text_accent),
+        Space::with_height(spacing::SM),
+        text("Waiting for authorization...")
+            .size(typography::SIZE_XS)
+            .style(components::text_muted),
     ]
-    .spacing(5);
+    .spacing(spacing::XS);
 
-    let poll_button = button(text("Check Status").size(14))
-        .padding([8, 16])
+    let poll_button = button(text("Check Status").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_primary)
         .on_press(Message::PollDeviceFlow);
 
-    let cancel_button = button(text("Cancel").size(14))
-        .padding([8, 16])
+    let cancel_button = button(text("Cancel").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_secondary)
         .on_press(Message::CancelAddAccount);
 
     container(
         column![
             title,
-            Space::with_height(15),
+            Space::with_height(spacing::LG),
             code_display,
-            Space::with_height(15),
+            Space::with_height(spacing::LG),
             instructions,
-            Space::with_height(15),
-            row![poll_button, Space::with_width(10), cancel_button],
+            Space::with_height(spacing::LG),
+            row![poll_button, Space::with_width(spacing::SM), cancel_button],
         ]
-        .spacing(5)
+        .spacing(spacing::XS)
         .align_x(iced::Alignment::Center),
     )
     .style(section_style)
-    .padding(20)
+    .padding(spacing::XL)
     .width(Length::Fill)
     .into()
 }
 
-/// Single account row
+/// Single account row with avatar and status badge
 fn account_row(account: &AccountSyncStatus) -> Element<'_, Message> {
     let name = account
         .display_name
@@ -208,61 +242,73 @@ fn account_row(account: &AccountSyncStatus) -> Element<'_, Message> {
         .filter(|n| !n.is_empty())
         .unwrap_or(&account.email);
 
-    let account_name = text(name).size(16);
-    let account_email = text(&account.email).size(12).style(|theme: &Theme| {
-        let palette = theme.palette();
-        iced::widget::text::Style {
-            color: Some(iced::Color {
-                a: 0.6,
-                ..palette.text
+    // Avatar
+    let avatar_widget = avatar(name, 40);
+
+    let account_name = text(name)
+        .size(typography::SIZE_MD)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
+
+    let account_email = text(&account.email)
+        .size(typography::SIZE_XS)
+        .style(components::text_secondary);
+
+    // Status badge with RADIUS_SM
+    let status_color = match account.status {
+        crate::api::types::SyncState::Idle => colors::ACCENT_SUCCESS,
+        crate::api::types::SyncState::Running => colors::ACCENT_INFO,
+        crate::api::types::SyncState::Paused => colors::ACCENT_WARNING,
+        crate::api::types::SyncState::Error => colors::ACCENT_ERROR,
+    };
+
+    let status_badge = container(
+        text(account.status.display_name())
+            .size(typography::SIZE_2XS)
+            .style(move |_: &Theme| iced::widget::text::Style {
+                color: Some(status_color),
             }),
-        }
+    )
+    .padding([spacing::SPACE_1, spacing::SM])
+    .style(move |_| container::Style {
+        background: Some(Background::Color(iced::Color {
+            a: 0.12,
+            ..status_color
+        })),
+        border: Border {
+            radius: spacing::RADIUS_SM.into(),
+            ..Default::default()
+        },
+        ..Default::default()
     });
 
-    let status_text = text(account.status.display_name()).size(12);
+    let remove_button = button(
+        text(icons::DELETE)
+            .size(typography::SIZE_SM)
+    )
+    .padding([spacing::XS, spacing::SM])
+    .style(components::button_danger)
+    .on_press(Message::ShowRemoveAccountModal(account.email.clone()));
 
-    let remove_button = button(text("Remove").size(12))
-        .padding([6, 12])
-        .style(|_theme: &Theme, _status| {
-            iced::widget::button::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.2, 0.2))),
-                text_color: iced::Color::WHITE,
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
-        .on_press(Message::ShowRemoveAccountModal(account.email.clone()));
-
-    let left_col = column![account_name, account_email, status_text]
-        .spacing(2)
-        .width(Length::FillPortion(3));
+    let left_col = row![
+        avatar_widget,
+        Space::with_width(spacing::MD),
+        column![account_name, account_email, Space::with_height(spacing::XS), status_badge]
+            .spacing(spacing::SPACE_1),
+    ]
+    .align_y(iced::Alignment::Center)
+    .width(Length::FillPortion(3));
 
     let right_col = column![remove_button]
         .width(Length::FillPortion(1))
         .align_x(iced::Alignment::End);
 
     let row_content = row![left_col, right_col]
-        .spacing(20)
-        .padding(15);
+        .spacing(spacing::XL)
+        .padding(spacing::LG);
 
     container(row_content)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            container::Style {
-                background: Some(iced::Background::Color(iced::Color {
-                    a: 0.05,
-                    ..palette.text
-                })),
-                border: iced::Border {
-                    radius: 8.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
+        .style(components::card_style)
         .width(Length::Fill)
         .into()
 }
@@ -273,87 +319,54 @@ fn remove_confirmation_modal(email: &str) -> Element<'static, Message> {
     let backdrop = container(Space::new(Length::Fill, Length::Fill))
         .width(Length::Fill)
         .height(Length::Fill)
-        .style(|_theme: &Theme| container::Style {
-            background: Some(iced::Background::Color(iced::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.5,
-            })),
-            ..Default::default()
-        });
+        .style(components::modal_backdrop_style);
 
     // Modal dialog
-    let title = text("Remove Account").size(20);
+    let title = text("Remove Account")
+        .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
+
     let message = text(format!(
         "Are you sure you want to remove {}?",
         email
     ))
-    .size(14);
-    let warning = text("This will stop syncing this account. Existing messages will not be deleted.")
-        .size(12)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            iced::widget::text::Style {
-                color: Some(iced::Color {
-                    a: 0.7,
-                    ..palette.text
-                }),
-            }
-        });
+    .size(typography::SIZE_SM)
+    .style(components::text_secondary);
 
-    let cancel_button = button(text("Cancel").size(14))
-        .padding([8, 16])
+    let warning = text("This will stop syncing this account. Existing messages will not be deleted.")
+        .size(typography::SIZE_XS)
+        .style(components::text_muted);
+
+    let cancel_button = button(text("Cancel").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_secondary)
         .on_press(Message::HideRemoveAccountModal);
 
-    let confirm_button = button(text("Remove").size(14))
-        .padding([8, 16])
-        .style(|_theme: &Theme, _status| {
-            iced::widget::button::Style {
-                background: Some(iced::Background::Color(iced::Color::from_rgb(0.8, 0.2, 0.2))),
-                text_color: iced::Color::WHITE,
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
+    let confirm_button = button(text("Remove").size(typography::SIZE_SM))
+        .padding([spacing::SM, spacing::LG])
+        .style(components::button_danger)
         .on_press(Message::ConfirmRemoveAccount);
 
-    let buttons = row![cancel_button, Space::with_width(10), confirm_button]
+    let buttons = row![cancel_button, Space::with_width(spacing::SM), confirm_button]
         .align_y(iced::Alignment::Center);
 
     let dialog_content = column![
         title,
-        Space::with_height(15),
+        Space::with_height(spacing::LG),
         message,
-        Space::with_height(10),
+        Space::with_height(spacing::SM),
         warning,
-        Space::with_height(20),
+        Space::with_height(spacing::XL),
         buttons,
     ]
-    .spacing(5)
-    .padding(20)
+    .spacing(spacing::XS)
+    .padding(spacing::XL)
     .align_x(iced::Alignment::Center);
 
     let dialog = container(dialog_content)
-        .style(|theme: &Theme| {
-            let palette = theme.palette();
-            container::Style {
-                background: Some(iced::Background::Color(palette.background)),
-                border: iced::Border {
-                    radius: 8.0.into(),
-                    width: 1.0,
-                    color: iced::Color {
-                        a: 0.3,
-                        ..palette.text
-                    },
-                },
-                ..Default::default()
-            }
-        })
-        .padding(10);
+        .style(components::modal_dialog_style)
+        .padding(spacing::SM);
 
     iced::widget::stack![
         backdrop,
@@ -363,20 +376,13 @@ fn remove_confirmation_modal(email: &str) -> Element<'static, Message> {
 }
 
 /// Section container style
-fn section_style(theme: &Theme) -> container::Style {
-    let palette = theme.palette();
+fn section_style(_theme: &Theme) -> container::Style {
     container::Style {
-        background: Some(iced::Background::Color(iced::Color {
-            a: 0.03,
-            ..palette.text
-        })),
-        border: iced::Border {
-            radius: 8.0.into(),
+        background: Some(Background::Color(colors::BG_SURFACE)),
+        border: Border {
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
-            color: iced::Color {
-                a: 0.1,
-                ..palette.text
-            },
+            color: colors::BORDER_SUBTLE,
         },
         ..Default::default()
     }

@@ -16,12 +16,12 @@ mod view;
 use app::MsgVaultApp;
 use config::Settings;
 use iced::theme::{Custom, Palette};
-use iced::{Color, Theme};
+use iced::Theme;
 
-/// Create the msgvault custom dark theme inspired by Zed One Dark
+/// Create the msgvault Foundry Dark theme
 fn msgvault_theme() -> Theme {
     Theme::Custom(std::sync::Arc::new(Custom::new(
-        "msgvault Dark".to_string(),
+        "Foundry Dark".to_string(),
         Palette {
             background: theme::colors::BG_BASE,
             text: theme::colors::TEXT_PRIMARY,
@@ -39,9 +39,14 @@ fn main() -> iced::Result {
         Settings::default()
     });
 
-    // Run the Iced application with custom theme
+    // Run the Iced application with Foundry Dark theme and IBM Plex fonts
     iced::application(MsgVaultApp::title, MsgVaultApp::update, MsgVaultApp::view)
         .subscription(MsgVaultApp::subscription)
+        .font(include_bytes!("../assets/fonts/IBMPlexSans-Regular.ttf").as_slice())
+        .font(include_bytes!("../assets/fonts/IBMPlexSans-Medium.ttf").as_slice())
+        .font(include_bytes!("../assets/fonts/IBMPlexSans-SemiBold.ttf").as_slice())
+        .font(include_bytes!("../assets/fonts/IBMPlexMono-Regular.ttf").as_slice())
+        .default_font(theme::typography::FONT_PRIMARY)
         .theme(|_| msgvault_theme())
         .run_with(|| MsgVaultApp::new(settings))
 }

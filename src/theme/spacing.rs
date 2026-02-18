@@ -1,30 +1,69 @@
-//! Spacing scale for the design system
+//! Spacing & layout constants
 //!
-//! Based on a 4px base unit for consistent spacing throughout the UI.
+//! 4px base unit with more steps for precision.
 
 // === Spacing Values ===
-// Using u16 for compatibility with Iced's padding/spacing
 
-/// Extra small - 4px - tight padding, icon margins
+/// Hairline — 2px
+pub const SPACE_1: u16 = 2;
+
+/// Tight inline — 4px
 pub const XS: u16 = 4;
 
-/// Small - 8px - compact spacing, inline elements
+/// Compact list items — 6px
+pub const SPACE_3: u16 = 6;
+
+/// Default inline gap — 8px
 pub const SM: u16 = 8;
 
-/// Medium - 12px - default gaps, form elements
+/// Form element gaps — 12px
 pub const MD: u16 = 12;
 
-/// Large - 16px - section padding, card content
+/// Section gaps — 16px
 pub const LG: u16 = 16;
 
-/// Extra large - 24px - major sections, panels
+/// Card padding — 20px
+pub const SPACE_10: u16 = 20;
+
+/// Panel padding — 24px
 pub const XL: u16 = 24;
 
-/// 2X large - 32px - page margins, modal padding
+/// Major section breaks — 32px
 pub const XXL: u16 = 32;
 
-/// 3X large - 48px - large separations
+/// Page margins — 40px
+pub const SPACE_20: u16 = 40;
+
+/// Hero spacing — 48px
 pub const XXXL: u16 = 48;
+
+// === Border Radius ===
+
+/// Small — badges, chips, inline elements
+pub const RADIUS_SM: f32 = 3.0;
+
+/// Medium — buttons, inputs, list items
+pub const RADIUS_MD: f32 = 6.0;
+
+/// Large — cards, panels
+pub const RADIUS_LG: f32 = 10.0;
+
+/// Extra large — modals, wizards
+pub const RADIUS_XL: f32 = 16.0;
+
+/// Full — avatars, circular buttons
+pub const RADIUS_FULL: f32 = 999.0;
+
+// === Layout Dimensions ===
+
+/// Sidebar width
+pub const SIDEBAR_WIDTH: f32 = 240.0;
+
+/// Message list panel width (as fill portion)
+pub const MESSAGE_LIST_PORTION: u16 = 2;
+
+/// Detail panel width (as fill portion)
+pub const DETAIL_PORTION: u16 = 3;
 
 // === Helper Functions ===
 

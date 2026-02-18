@@ -9,22 +9,21 @@ use iced::{Background, Border, Element, Length, Theme};
 
 /// Render a stats card with label and value
 pub fn stats_card<'a>(label: &'a str, value: impl ToString) -> Element<'a, Message> {
-    let card_style = |_theme: &Theme| {
-        container::Style {
-            background: Some(Background::Color(colors::BG_SURFACE)),
-            border: Border {
-                radius: 8.0.into(),
-                width: 1.0,
-                color: colors::BORDER_SUBTLE,
-            },
-            ..Default::default()
-        }
+    let card_style = |_theme: &Theme| container::Style {
+        background: Some(Background::Color(colors::BG_SURFACE)),
+        border: Border {
+            radius: spacing::RADIUS_MD.into(),
+            width: 1.0,
+            color: colors::BORDER_SUBTLE,
+        },
+        ..Default::default()
     };
 
     container(
         column![
             text(value.to_string())
                 .size(typography::SIZE_XL)
+                .font(typography::FONT_SEMIBOLD)
                 .style(components::text_primary),
             text(label)
                 .size(typography::SIZE_XS)

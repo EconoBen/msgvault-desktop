@@ -4,9 +4,9 @@
 
 use crate::message::Message;
 use crate::model::ComposeState;
-use crate::theme::{colors, components, spacing, typography};
+use crate::theme::{colors, components, icons, spacing, typography};
 use crate::view::widgets::format_bytes;
-use iced::widget::{button, column, container, row, text, text_input, Space};
+use iced::widget::{button, column, container, horizontal_rule, row, text, text_input, Space};
 use iced::{Background, Border, Element, Length};
 
 /// Render the compose modal overlay
@@ -35,11 +35,20 @@ fn compose_dialog(compose: &ComposeState) -> Element<'static, Message> {
     // From selector
     let from_section = from_section(compose);
 
+    // Section divider
+    let divider1 = section_divider();
+
     // Recipients section
     let recipients = recipients_section(compose);
 
+    // Section divider
+    let divider2 = section_divider();
+
     // Subject
     let subject_section = subject_section(compose);
+
+    // Section divider
+    let divider3 = section_divider();
 
     // Body editor
     let body_section = body_section(compose);
@@ -68,7 +77,7 @@ fn compose_dialog(compose: &ComposeState) -> Element<'static, Message> {
                 0.15,
             ))),
             border: Border {
-                radius: 4.0.into(),
+                radius: spacing::RADIUS_SM.into(),
                 ..Default::default()
             },
             ..Default::default()
@@ -82,11 +91,11 @@ fn compose_dialog(compose: &ComposeState) -> Element<'static, Message> {
         header,
         Space::with_height(spacing::MD),
         from_section,
-        Space::with_height(spacing::SM),
+        divider1,
         recipients,
-        Space::with_height(spacing::SM),
+        divider2,
         subject_section,
-        Space::with_height(spacing::SM),
+        divider3,
         body_section,
         attachments,
         error_msg,
@@ -102,13 +111,24 @@ fn compose_dialog(compose: &ComposeState) -> Element<'static, Message> {
         .into()
 }
 
+/// Section divider line
+fn section_divider() -> Element<'static, Message> {
+    container(horizontal_rule(1))
+        .padding([spacing::XS, 0])
+        .style(|_| container::Style {
+            ..Default::default()
+        })
+        .into()
+}
+
 /// Header with title and close button
 fn compose_header(compose: &ComposeState) -> Element<'static, Message> {
     let title = text(compose.mode.display_name())
         .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
-    let close_btn = button(text("✕").size(typography::SIZE_MD))
+    let close_btn = button(text(icons::DELETE).size(typography::SIZE_MD))
         .padding([spacing::XS, spacing::SM])
         .style(components::button_ghost)
         .on_press(Message::ComposeClose);
@@ -128,7 +148,7 @@ fn from_section(compose: &ComposeState) -> Element<'static, Message> {
         .size(typography::SIZE_SM)
         .style(components::text_primary);
 
-    column![label, account_display].spacing(2).into()
+    column![label, account_display].spacing(spacing::SPACE_1).into()
 }
 
 /// Recipients section (To, CC, BCC)
@@ -156,7 +176,7 @@ fn recipients_section(compose: &ComposeState) -> Element<'static, Message> {
     to_row = to_row.push(to_input);
     let to_row = to_row.align_y(iced::Alignment::Center);
 
-    let mut sections = column![column![to_label, to_row].spacing(2)].spacing(spacing::SM);
+    let mut sections = column![column![to_label, to_row].spacing(spacing::SPACE_1)].spacing(spacing::SM);
 
     // CC/BCC toggle
     if !compose.show_cc_bcc {
@@ -165,7 +185,7 @@ fn recipients_section(compose: &ComposeState) -> Element<'static, Message> {
                 .size(typography::SIZE_XS)
                 .style(components::text_accent),
         )
-        .padding([2, spacing::SM])
+        .padding([spacing::SPACE_1, spacing::SM])
         .style(components::button_ghost)
         .on_press(Message::ComposeToggleCcBcc);
 
@@ -218,33 +238,37 @@ fn recipients_section(compose: &ComposeState) -> Element<'static, Message> {
         let bcc_row = bcc_row.align_y(iced::Alignment::Center);
 
         sections = sections
-            .push(column![cc_label, cc_row].spacing(2))
-            .push(column![bcc_label, bcc_row].spacing(2));
+            .push(column![cc_label, cc_row].spacing(spacing::SPACE_1))
+            .push(column![bcc_label, bcc_row].spacing(spacing::SPACE_1));
     }
 
     sections.into()
 }
 
-/// Single recipient chip with remove button
+/// Single recipient chip with RADIUS_SM, BG_ELEVATED background, copper remove button
 fn recipient_chip(email: String, on_remove: Message) -> Element<'static, Message> {
     let content = row![
         text(email)
             .size(typography::SIZE_XS)
             .style(components::text_primary),
         Space::with_width(spacing::XS),
-        button(text("×").size(typography::SIZE_XS))
-            .padding([0, spacing::XS])
-            .style(components::button_ghost)
-            .on_press(on_remove),
+        button(
+            text(icons::DELETE)
+                .size(typography::SIZE_2XS)
+                .style(components::text_accent)
+        )
+        .padding([0, spacing::XS])
+        .style(components::button_ghost)
+        .on_press(on_remove),
     ]
     .align_y(iced::Alignment::Center);
 
     container(content)
-        .padding([2, spacing::SM])
+        .padding([spacing::SPACE_1, spacing::SM])
         .style(|_| container::Style {
             background: Some(Background::Color(colors::BG_ELEVATED)),
             border: Border {
-                radius: 4.0.into(),
+                radius: spacing::RADIUS_SM.into(),
                 width: 1.0,
                 color: colors::BORDER_SUBTLE,
             },
@@ -253,7 +277,7 @@ fn recipient_chip(email: String, on_remove: Message) -> Element<'static, Message
         .into()
 }
 
-/// Subject input
+/// Subject input with FONT_MEDIUM
 fn subject_section(compose: &ComposeState) -> Element<'static, Message> {
     let label = text("Subject")
         .size(typography::SIZE_XS)
@@ -263,9 +287,10 @@ fn subject_section(compose: &ComposeState) -> Element<'static, Message> {
         .on_input(Message::ComposeSubjectChanged)
         .padding(spacing::SM)
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_input_style);
 
-    column![label, input].spacing(2).into()
+    column![label, input].spacing(spacing::SPACE_1).into()
 }
 
 /// Body text editor
@@ -283,7 +308,7 @@ fn body_section(compose: &ComposeState) -> Element<'static, Message> {
         .style(|_| container::Style {
             background: Some(Background::Color(colors::BG_SURFACE)),
             border: Border {
-                radius: 4.0.into(),
+                radius: spacing::RADIUS_MD.into(),
                 width: 1.0,
                 color: colors::BORDER_SUBTLE,
             },
@@ -297,6 +322,7 @@ fn attachments_section(compose: &ComposeState) -> Element<'static, Message> {
     let title = row![
         text("Attachments")
             .size(typography::SIZE_SM)
+            .font(typography::FONT_MEDIUM)
             .style(components::text_secondary),
         Space::with_width(spacing::SM),
         text(format!("({})", compose.attachments.len()))
@@ -309,20 +335,42 @@ fn attachments_section(compose: &ComposeState) -> Element<'static, Message> {
         .iter()
         .enumerate()
         .map(|(i, att)| {
+            let file_icon = icons::file_icon(&att.filename);
             let filename = text(att.filename.clone())
                 .size(typography::SIZE_SM)
                 .style(components::text_primary);
             let size = text(format!("({})", format_bytes(att.size_bytes)))
                 .size(typography::SIZE_XS)
                 .style(components::text_muted);
-            let remove_btn = button(text("×").size(typography::SIZE_SM))
-                .padding([0, spacing::XS])
-                .style(components::button_ghost)
-                .on_press(Message::ComposeRemoveAttachment(i));
+            let remove_btn = button(
+                text(icons::DELETE)
+                    .size(typography::SIZE_SM)
+                    .style(components::text_accent)
+            )
+            .padding([0, spacing::XS])
+            .style(components::button_ghost)
+            .on_press(Message::ComposeRemoveAttachment(i));
 
             row![
-                text("📎").size(typography::SIZE_SM),
-                Space::with_width(spacing::XS),
+                container(
+                    text(file_icon)
+                        .size(typography::SIZE_2XS)
+                        .font(typography::FONT_MONO)
+                        .style(components::text_accent)
+                )
+                .padding([spacing::SPACE_1, spacing::XS])
+                .style(|_| container::Style {
+                    background: Some(Background::Color(colors::with_alpha(
+                        colors::ACCENT_PRIMARY,
+                        0.15,
+                    ))),
+                    border: Border {
+                        radius: spacing::RADIUS_SM.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                Space::with_width(spacing::SM),
                 filename,
                 Space::with_width(spacing::XS),
                 size,
@@ -340,12 +388,12 @@ fn attachments_section(compose: &ComposeState) -> Element<'static, Message> {
         .into()
 }
 
-/// Footer with action buttons
+/// Footer with action buttons -- Send as button_primary (copper)
 fn compose_footer(compose: &ComposeState) -> Element<'static, Message> {
     // Left side: attach button
     let attach_btn = button(
         row![
-            text("📎").size(typography::SIZE_SM),
+            text(icons::ATTACH).size(typography::SIZE_SM),
             Space::with_width(spacing::XS),
             text("Attach").size(typography::SIZE_SM),
         ]
@@ -372,6 +420,7 @@ fn compose_footer(compose: &ComposeState) -> Element<'static, Message> {
         "Send"
     };
 
+    // Send button uses button_primary (copper)
     let send_btn = if compose.can_send() {
         button(text(send_text).size(typography::SIZE_SM))
             .padding([spacing::SM, spacing::LG])

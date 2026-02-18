@@ -19,6 +19,7 @@ pub fn settings_view<'a>(
     // Header
     let title = text("Settings")
         .size(typography::SIZE_XL)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_primary);
 
     // Tab bar
@@ -36,9 +37,10 @@ pub fn settings_view<'a>(
         .style(components::button_primary)
         .on_press(Message::SaveSettings);
 
-    // Keyboard hints
+    // Keyboard hints in FONT_MONO
     let hints = text(",: settings | Esc: back (without saving)")
-        .size(typography::SIZE_XS)
+        .size(typography::SIZE_2XS)
+        .font(typography::FONT_MONO)
         .style(components::text_muted);
 
     column![
@@ -64,19 +66,60 @@ fn tab_bar_widget(current: SettingsTab) -> Element<'static, Message> {
     let server_tab = tab_button("Server", SettingsTab::Server, current == SettingsTab::Server);
     let display_tab = tab_button("Display", SettingsTab::Display, current == SettingsTab::Display);
 
-    row![server_tab, Space::with_width(spacing::XS), display_tab]
-        .into()
+    container(
+        row![server_tab, Space::with_width(spacing::XS), display_tab],
+    )
+    .style(|_| container::Style {
+        border: Border {
+            width: 0.0,
+            color: colors::BORDER_SUBTLE,
+            radius: 0.0.into(),
+        },
+        ..Default::default()
+    })
+    .into()
 }
 
-/// Single tab button
+/// Single tab button with copper left border when active
 fn tab_button(label: &'static str, tab: SettingsTab, is_active: bool) -> Element<'static, Message> {
-    let btn = button(text(label).size(typography::SIZE_SM))
+    let label_text = text(label)
+        .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM);
+
+    let btn = button(label_text)
         .padding([spacing::SM, spacing::XL]);
 
     if is_active {
-        btn.style(components::button_primary)
-           .on_press(Message::SwitchSettingsTab(tab))
-           .into()
+        // Wrap in container for copper left-border indicator
+        let styled_btn = btn
+            .style(|_theme: &Theme, status| {
+                let bg = match status {
+                    button::Status::Hovered => colors::BG_ELEVATED,
+                    _ => colors::BG_SURFACE,
+                };
+                button::Style {
+                    background: Some(Background::Color(bg)),
+                    text_color: colors::ACCENT_PRIMARY,
+                    border: Border {
+                        radius: spacing::RADIUS_MD.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            })
+            .on_press(Message::SwitchSettingsTab(tab));
+
+        // Copper left border indicator
+        container(styled_btn)
+            .style(|_| container::Style {
+                border: Border {
+                    width: 2.0,
+                    color: colors::ACCENT_PRIMARY,
+                    radius: spacing::RADIUS_MD.into(),
+                },
+                ..Default::default()
+            })
+            .into()
     } else {
         btn.style(components::button_ghost)
            .on_press(Message::SwitchSettingsTab(tab))
@@ -91,8 +134,15 @@ fn server_tab<'a>(
     testing: bool,
     result: Option<&'a Result<(), String>>,
 ) -> Element<'a, Message> {
+    // Section header
+    let section_header = text("Connection")
+        .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
+
     let url_label = text("Server URL")
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_secondary);
 
     let url_input = text_input("http://localhost:8080", server_url)
@@ -103,6 +153,7 @@ fn server_tab<'a>(
 
     let api_key_label = text("API Key")
         .size(typography::SIZE_SM)
+        .font(typography::FONT_MEDIUM)
         .style(components::text_secondary);
 
     let api_key_input = text_input("(optional)", api_key)
@@ -138,6 +189,8 @@ fn server_tab<'a>(
 
     container(
         column![
+            section_header,
+            Space::with_height(spacing::LG),
             url_label,
             url_input,
             Space::with_height(spacing::LG),
@@ -157,14 +210,15 @@ fn server_tab<'a>(
 
 /// Display settings tab content
 fn display_tab<'a>() -> Element<'a, Message> {
-    // Placeholder for display settings
-    // Could include: theme selection, date format, font size, etc.
+    // Section header
+    let section_header = text("Display Settings")
+        .size(typography::SIZE_LG)
+        .font(typography::FONT_MEDIUM)
+        .style(components::text_primary);
 
     container(
         column![
-            text("Display Settings")
-                .size(typography::SIZE_LG)
-                .style(components::text_primary),
+            section_header,
             Space::with_height(spacing::LG),
             text("Theme: System Default")
                 .size(typography::SIZE_SM)
@@ -195,12 +249,12 @@ fn truncate_error(s: &str, max_len: usize) -> String {
     }
 }
 
-/// Section container style
+/// Section container style with RADIUS_MD
 fn section_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::BG_SURFACE)),
         border: Border {
-            radius: 8.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
             color: colors::BORDER_SUBTLE,
         },

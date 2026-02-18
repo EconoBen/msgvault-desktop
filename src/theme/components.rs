@@ -1,38 +1,40 @@
 //! Component style functions for the design system
 //!
-//! Provides reusable style functions for common UI patterns.
+//! Reusable style functions for common UI patterns.
+//! Uses Foundry Dark palette with copper accents.
 
 use iced::widget::{button, container, text, text_input};
 use iced::{Background, Border, Color, Shadow, Theme, Vector};
 
 use super::colors;
+use super::spacing;
 
 // === Container Styles ===
 
-/// Card style - elevated surface with subtle border and shadow
+/// Card style — elevated surface with subtle border and shadow
 pub fn card_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::BG_SURFACE)),
         border: Border {
-            radius: 6.0.into(),
+            radius: spacing::RADIUS_LG.into(),
             width: 1.0,
             color: colors::BORDER_SUBTLE,
         },
         shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.15),
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.2),
             offset: Vector::new(0.0, 2.0),
-            blur_radius: 8.0,
+            blur_radius: 12.0,
         },
         ..Default::default()
     }
 }
 
-/// Panel style - surface container without shadow
+/// Panel style — surface container without shadow
 pub fn panel_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::BG_SURFACE)),
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
             color: colors::BORDER_SUBTLE,
         },
@@ -40,10 +42,10 @@ pub fn panel_style(_theme: &Theme) -> container::Style {
     }
 }
 
-/// Sidebar style - base background for navigation
+/// Sidebar style — deep background for navigation
 pub fn sidebar_style(_theme: &Theme) -> container::Style {
     container::Style {
-        background: Some(Background::Color(colors::BG_BASE)),
+        background: Some(Background::Color(colors::BG_DEEP)),
         border: Border {
             radius: 0.0.into(),
             width: 0.0,
@@ -53,27 +55,27 @@ pub fn sidebar_style(_theme: &Theme) -> container::Style {
     }
 }
 
-/// Modal backdrop - semi-transparent overlay
+/// Modal backdrop — semi-transparent overlay
 pub fn modal_backdrop_style(_theme: &Theme) -> container::Style {
     container::Style {
-        background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.5))),
+        background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.6))),
         ..Default::default()
     }
 }
 
-/// Modal dialog - elevated overlay container
+/// Modal dialog — elevated overlay container
 pub fn modal_dialog_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::BG_OVERLAY)),
         border: Border {
-            radius: 8.0.into(),
+            radius: spacing::RADIUS_XL.into(),
             width: 1.0,
             color: colors::BORDER_VISIBLE,
         },
         shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.4),
             offset: Vector::new(0.0, 8.0),
-            blur_radius: 24.0,
+            blur_radius: 32.0,
         },
         ..Default::default()
     }
@@ -84,7 +86,7 @@ pub fn selected_row_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::SELECTION_BG)),
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
@@ -96,7 +98,7 @@ pub fn hover_row_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(colors::BG_ELEVATED)),
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
@@ -105,11 +107,11 @@ pub fn hover_row_style(_theme: &Theme) -> container::Style {
 
 // === Button Styles ===
 
-/// Primary button - main action button
+/// Primary button — copper accent, main action
 pub fn button_primary(_theme: &Theme, status: button::Status) -> button::Style {
     let bg_color = match status {
-        button::Status::Hovered => colors::lighten(colors::ACCENT_PRIMARY, 0.1),
-        button::Status::Pressed => colors::darken(colors::ACCENT_PRIMARY, 0.1),
+        button::Status::Hovered => colors::ACCENT_HOVER,
+        button::Status::Pressed => colors::ACCENT_PRESSED,
         button::Status::Disabled => colors::with_alpha(colors::ACCENT_PRIMARY, 0.5),
         _ => colors::ACCENT_PRIMARY,
     };
@@ -118,14 +120,14 @@ pub fn button_primary(_theme: &Theme, status: button::Status) -> button::Style {
         background: Some(Background::Color(bg_color)),
         text_color: Color::WHITE,
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
     }
 }
 
-/// Secondary button - less prominent action
+/// Secondary button — less prominent action
 pub fn button_secondary(_theme: &Theme, status: button::Status) -> button::Style {
     let bg_color = match status {
         button::Status::Hovered => colors::BG_ELEVATED,
@@ -138,7 +140,7 @@ pub fn button_secondary(_theme: &Theme, status: button::Status) -> button::Style
         background: Some(Background::Color(bg_color)),
         text_color: colors::TEXT_PRIMARY,
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
             color: colors::BORDER_VISIBLE,
         },
@@ -146,7 +148,7 @@ pub fn button_secondary(_theme: &Theme, status: button::Status) -> button::Style
     }
 }
 
-/// Ghost button - minimal visual weight
+/// Ghost button — minimal visual weight
 pub fn button_ghost(_theme: &Theme, status: button::Status) -> button::Style {
     let bg_color = match status {
         button::Status::Hovered => colors::BG_ELEVATED,
@@ -158,14 +160,14 @@ pub fn button_ghost(_theme: &Theme, status: button::Status) -> button::Style {
         background: Some(Background::Color(bg_color)),
         text_color: colors::TEXT_SECONDARY,
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
     }
 }
 
-/// Danger button - destructive action
+/// Danger button — destructive action
 pub fn button_danger(_theme: &Theme, status: button::Status) -> button::Style {
     let bg_color = match status {
         button::Status::Hovered => colors::lighten(colors::ACCENT_ERROR, 0.1),
@@ -178,14 +180,14 @@ pub fn button_danger(_theme: &Theme, status: button::Status) -> button::Style {
         background: Some(Background::Color(bg_color)),
         text_color: Color::WHITE,
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             ..Default::default()
         },
         ..Default::default()
     }
 }
 
-/// Icon button - circular, minimal
+/// Icon button — circular, minimal
 pub fn button_icon(_theme: &Theme, status: button::Status) -> button::Style {
     let bg_color = match status {
         button::Status::Hovered => colors::BG_ELEVATED,
@@ -197,7 +199,7 @@ pub fn button_icon(_theme: &Theme, status: button::Status) -> button::Style {
         background: Some(Background::Color(bg_color)),
         text_color: colors::TEXT_SECONDARY,
         border: Border {
-            radius: 16.0.into(), // More rounded for icon buttons
+            radius: spacing::RADIUS_FULL.into(),
             ..Default::default()
         },
         ..Default::default()
@@ -211,14 +213,14 @@ pub fn text_input_style(_theme: &Theme, status: text_input::Status) -> text_inpu
     let (border_color, bg_color) = match status {
         text_input::Status::Focused => (colors::ACCENT_PRIMARY, colors::BG_ELEVATED),
         text_input::Status::Hovered => (colors::BORDER_VISIBLE, colors::BG_ELEVATED),
-        text_input::Status::Disabled => (colors::BORDER_SUBTLE, colors::BG_BASE),
+        text_input::Status::Disabled => (colors::BORDER_SUBTLE, colors::BG_DEEP),
         _ => (colors::BORDER_VISIBLE, colors::BG_SURFACE),
     };
 
     text_input::Style {
         background: Background::Color(bg_color),
         border: Border {
-            radius: 4.0.into(),
+            radius: spacing::RADIUS_MD.into(),
             width: 1.0,
             color: border_color,
         },
@@ -252,7 +254,7 @@ pub fn text_muted(_theme: &Theme) -> text::Style {
     }
 }
 
-/// Accent text style
+/// Accent text style (copper)
 pub fn text_accent(_theme: &Theme) -> text::Style {
     text::Style {
         color: Some(colors::ACCENT_PRIMARY),
@@ -270,5 +272,12 @@ pub fn text_success(_theme: &Theme) -> text::Style {
 pub fn text_error(_theme: &Theme) -> text::Style {
     text::Style {
         color: Some(colors::ACCENT_ERROR),
+    }
+}
+
+/// Info text style
+pub fn text_info(_theme: &Theme) -> text::Style {
+    text::Style {
+        color: Some(colors::ACCENT_INFO),
     }
 }
