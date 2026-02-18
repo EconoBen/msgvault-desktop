@@ -122,17 +122,26 @@ fn header_section(
 fn empty_state<'a>() -> Element<'a, Message> {
     container(
         column![
+            text(icons::DIAMOND_SM)
+                .size(typography::SIZE_2XL)
+                .style(components::text_muted),
+            Space::with_height(spacing::MD),
             text("No messages")
                 .size(typography::SIZE_MD)
+                .font(typography::FONT_SEMIBOLD)
                 .style(components::text_secondary),
             Space::with_height(spacing::XS),
-            text("Try adjusting your filters")
+            text("Try adjusting your filters or browsing a different view")
                 .size(typography::SIZE_SM)
                 .style(components::text_muted),
         ]
+        .spacing(spacing::XS)
         .align_x(iced::Alignment::Center),
     )
     .width(Length::Fill)
+    .height(Length::Fill)
+    .center_x(Length::Fill)
+    .center_y(Length::Fill)
     .padding(spacing::XXL)
     .into()
 }

@@ -13,5 +13,5 @@ pub use aggregate_row::aggregate_row;
 pub use avatar::avatar;
 pub use badge::{badge, count_badge, unread_dot, attachment_indicator, BadgeStyle};
 pub use breadcrumb::breadcrumb;
-pub use loading::{error, loading};
+pub use loading::{empty_state, error, loading};
 pub use stats_card::{format_bytes, format_number, stats_card};

@@ -9,7 +9,9 @@ use crate::update;
 use crate::view;
 use iced::event::Event;
 use iced::keyboard;
+use iced::time;
 use iced::{Element, Subscription, Task};
+use std::time::Duration;
 
 /// Main application state container
 pub struct MsgVaultApp {
@@ -57,13 +59,20 @@ impl MsgVaultApp {
         view::render(&self.state)
     }
 
-    /// Subscribe to events (keyboard, etc.)
+    /// Subscribe to events (keyboard, sync polling, etc.)
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::event::listen().map(|event| match event {
+        let keyboard = iced::event::listen().map(|event| match event {
             Event::Keyboard(keyboard::Event::KeyPressed {
                 key, modifiers, ..
             }) => Message::KeyPressed(key, modifiers),
             _ => Message::None,
-        })
+        });
+
+        if self.state.is_connected() {
+            let tick = time::every(Duration::from_secs(30)).map(|_| Message::SyncTick);
+            Subscription::batch([keyboard, tick])
+        } else {
+            keyboard
+        }
     }
 }

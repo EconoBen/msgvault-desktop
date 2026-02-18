@@ -42,6 +42,12 @@ fn main() -> iced::Result {
     // Run the Iced application with Foundry Dark theme and IBM Plex fonts
     iced::application(MsgVaultApp::title, MsgVaultApp::update, MsgVaultApp::view)
         .subscription(MsgVaultApp::subscription)
+        .window(iced::window::Settings {
+            size: iced::Size::new(1200.0, 800.0),
+            min_size: Some(iced::Size::new(900.0, 600.0)),
+            position: iced::window::Position::Centered,
+            ..Default::default()
+        })
         .font(include_bytes!("../assets/fonts/IBMPlexSans-Regular.ttf").as_slice())
         .font(include_bytes!("../assets/fonts/IBMPlexSans-Medium.ttf").as_slice())
         .font(include_bytes!("../assets/fonts/IBMPlexSans-SemiBold.ttf").as_slice())

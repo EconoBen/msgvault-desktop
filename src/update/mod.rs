@@ -123,8 +123,11 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
         Message::HealthChecked(result) => match result {
             Ok(_health) => {
                 state.connection_status = ConnectionStatus::Connected;
-                // After connecting, fetch stats
-                Task::done(Message::FetchStats)
+                // Fetch both stats AND sync status for sidebar accounts
+                Task::batch([
+                    Task::done(Message::FetchStats),
+                    Task::done(Message::FetchSyncStatus),
+                ])
             }
             Err(e) => {
                 state.connection_status = ConnectionStatus::Failed(e.to_string());
@@ -648,6 +651,11 @@ pub fn handle(state: &mut AppState, message: Message) -> Task<Message> {
                 return Task::done(Message::FetchSyncStatus);
             }
             Task::none()
+        }
+
+        Message::SyncTick => {
+            // Periodic sync poll: fetch latest sync status to keep sidebar accounts updated
+            Task::done(Message::FetchSyncStatus)
         }
 
         // === Account Management ===

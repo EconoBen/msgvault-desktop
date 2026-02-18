@@ -100,7 +100,6 @@ pub fn sidebar<'a>(
 
     let divider = divider_line();
     let bottom = bottom_navigation();
-    let status = connection_status();
 
     let content = column![
         header,
@@ -116,8 +115,6 @@ pub fn sidebar<'a>(
         divider,
         Space::with_height(spacing::SM),
         bottom,
-        Space::with_height(spacing::SM),
-        status,
     ]
     .padding([spacing::LG, spacing::MD])
     .width(Length::Fill);
@@ -365,42 +362,14 @@ fn bottom_navigation() -> Element<'static, Message> {
 }
 
 // ───────────────────────────────────────────────────────────────
-// Connection status
-// ───────────────────────────────────────────────────────────────
-
-/// "Connected ●" status line at the very bottom.
-fn connection_status() -> Element<'static, Message> {
-    container(
-        row![
-            text("Connected")
-                .size(typography::SIZE_2XS)
-                .font(typography::FONT_PRIMARY)
-                .style(components::text_muted),
-            Space::with_width(spacing::XS),
-            text(icons::DOT_FILLED)
-                .size(typography::SIZE_2XS)
-                .style(components::text_success),
-        ]
-        .align_y(iced::Alignment::Center),
-    )
-    .padding([spacing::XS, spacing::SM])
-    .width(Length::Fill)
-    .into()
-}
-
-// ───────────────────────────────────────────────────────────────
 // Nav item (icon + label + optional shortcut, active state)
 // ───────────────────────────────────────────────────────────────
 
 /// A single navigation row.
 ///
-/// Active items get:
-///   - SELECTION_BG background
-///   - 2 px copper left border
-///   - TEXT_PRIMARY text color
-///
-/// Inactive items get TEXT_SECONDARY text, transparent background.
-/// An optional `shortcut` is rendered right-aligned in FONT_MONO.
+/// Active items get SELECTION_BG background + copper left border via
+/// box-shadow emulation (left padding + colored container).
+/// Inactive items get transparent background with hover highlight.
 fn nav_item(
     icon: &'static str,
     label: &'static str,
@@ -408,7 +377,6 @@ fn nav_item(
     is_active: bool,
     shortcut: Option<&'static str>,
 ) -> Element<'static, Message> {
-    // Build the inner row: icon + label + (optional shortcut)
     let mut content = row![
         text(icon)
             .size(typography::SIZE_SM)
@@ -434,53 +402,40 @@ fn nav_item(
         );
     }
 
-    let style = if is_active {
-        move |_theme: &iced::Theme, _status: button::Status| button::Style {
-            background: Some(Background::Color(colors::SELECTION_BG)),
-            text_color: colors::TEXT_PRIMARY,
-            border: Border {
-                radius: spacing::RADIUS_SM.into(),
-                width: 0.0,
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-    } else {
-        move |_theme: &iced::Theme, _status: button::Status| button::Style {
-            background: None,
-            text_color: colors::TEXT_SECONDARY,
-            border: Border {
-                radius: spacing::RADIUS_SM.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-    };
-
-    // Wrap in a container that provides the left accent border when active.
-    let btn: Element<'static, Message> = button(content)
+    button(content)
         .width(Length::Fill)
         .padding([spacing::XS, spacing::SM])
-        .style(style)
+        .style(move |_theme: &iced::Theme, status: button::Status| {
+            if is_active {
+                button::Style {
+                    background: Some(Background::Color(colors::SELECTION_BG)),
+                    text_color: colors::TEXT_PRIMARY,
+                    border: Border {
+                        radius: spacing::RADIUS_SM.into(),
+                        width: 2.0,
+                        color: colors::ACCENT_PRIMARY,
+                    },
+                    ..Default::default()
+                }
+            } else {
+                let bg = match status {
+                    button::Status::Hovered => Some(Background::Color(colors::BG_ELEVATED)),
+                    button::Status::Pressed => Some(Background::Color(colors::BG_OVERLAY)),
+                    _ => None,
+                };
+                button::Style {
+                    background: bg,
+                    text_color: colors::TEXT_SECONDARY,
+                    border: Border {
+                        radius: spacing::RADIUS_SM.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            }
+        })
         .on_press(message)
-        .into();
-
-    if is_active {
-        // Wrap the button in a container that draws a 2px copper left border.
-        container(btn)
-            .width(Length::Fill)
-            .style(move |_| container::Style {
-                border: Border {
-                    color: colors::ACCENT_PRIMARY,
-                    width: 2.0,
-                    radius: spacing::RADIUS_SM.into(),
-                },
-                ..Default::default()
-            })
-            .into()
-    } else {
-        btn
-    }
+        .into()
 }
 
 // ───────────────────────────────────────────────────────────────

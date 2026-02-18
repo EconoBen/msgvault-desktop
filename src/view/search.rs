@@ -86,19 +86,63 @@ pub fn search_view<'a>(
     // Results list content
     let list_content: Element<'a, Message> = if is_searching {
         container(
-            text("Searching...")
-                .size(typography::SIZE_SM)
-                .style(components::text_muted),
+            column![
+                text(icons::DOTS)
+                    .size(typography::SIZE_XL)
+                    .style(components::text_muted),
+                text("Searching...")
+                    .size(typography::SIZE_SM)
+                    .font(typography::FONT_MEDIUM)
+                    .style(components::text_muted),
+            ]
+            .spacing(spacing::SM)
+            .align_x(iced::Alignment::Center),
         )
-        .padding(spacing::XL)
+        .width(Length::Fill)
+        .center_x(Length::Fill)
+        .padding(spacing::XXL)
+        .into()
+    } else if results.is_empty() && !query.is_empty() {
+        container(
+            column![
+                text(icons::SEARCH)
+                    .size(typography::SIZE_XL)
+                    .style(components::text_muted),
+                text("No results found")
+                    .size(typography::SIZE_MD)
+                    .font(typography::FONT_SEMIBOLD)
+                    .style(components::text_secondary),
+                text("Try different search terms")
+                    .size(typography::SIZE_SM)
+                    .style(components::text_muted),
+            ]
+            .spacing(spacing::SM)
+            .align_x(iced::Alignment::Center),
+        )
+        .width(Length::Fill)
+        .center_x(Length::Fill)
+        .padding(spacing::XXL)
         .into()
     } else if results.is_empty() {
         container(
-            text("No results")
-                .size(typography::SIZE_SM)
-                .style(components::text_muted),
+            column![
+                text(icons::SEARCH)
+                    .size(typography::SIZE_XL)
+                    .style(components::text_muted),
+                text("Search your archive")
+                    .size(typography::SIZE_MD)
+                    .font(typography::FONT_SEMIBOLD)
+                    .style(components::text_secondary),
+                text("Type to search across all messages")
+                    .size(typography::SIZE_SM)
+                    .style(components::text_muted),
+            ]
+            .spacing(spacing::SM)
+            .align_x(iced::Alignment::Center),
         )
-        .padding(spacing::XL)
+        .width(Length::Fill)
+        .center_x(Length::Fill)
+        .padding(spacing::XXL)
         .into()
     } else {
         let rows: Vec<Element<'a, Message>> = results

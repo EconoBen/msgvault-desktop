@@ -129,6 +129,8 @@ pub enum Message {
     SyncTriggered(Result<SyncTriggerResponse, AppError>),
     /// Refresh sync status (polling)
     RefreshSyncStatus,
+    /// Periodic sync tick (fires every 30s when connected)
+    SyncTick,
 
     // === Account Management ===
     /// Open accounts view

@@ -193,6 +193,16 @@ pub const FOCUS_RING: Color = Color {
     a: 0.5,
 };
 
+// === Transparent ===
+
+/// Fully transparent
+pub const TRANSPARENT: Color = Color {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 0.0,
+};
+
 // === Utility Functions ===
 
 /// Lighten a color by a factor (0.0 to 1.0)

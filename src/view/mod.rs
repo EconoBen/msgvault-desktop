@@ -14,8 +14,10 @@ pub mod messages;
 pub mod search;
 pub mod settings;
 pub mod sidebar;
+pub mod status_bar;
 pub mod sync;
 pub mod thread;
+pub mod toolbar;
 pub mod widgets;
 pub mod wizard;
 
@@ -28,8 +30,10 @@ pub use messages::messages_view;
 pub use search::search_view;
 pub use settings::settings_view;
 pub use sidebar::sidebar;
+pub use status_bar::status_bar;
 pub use sync::sync_view;
 pub use thread::thread_view;
+pub use toolbar::toolbar;
 pub use wizard::wizard_view;
 
 use crate::message::Message;
@@ -173,6 +177,11 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
     // Create sidebar
     let sidebar_element = sidebar(state.navigation.current(), &account_emails, &labels);
 
+    // Toolbar
+    let has_selection = !state.selected_messages.is_empty();
+    let selection_count = state.selected_messages.len();
+    let toolbar_bar = toolbar(state.navigation.current(), has_selection, selection_count);
+
     // Main content based on loading state and current view
     let content = match &state.loading {
         LoadingState::Loading => loading("Loading..."),
@@ -180,8 +189,17 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
         LoadingState::Idle => view_content(state),
     };
 
+    // Wrap content with toolbar on top
+    let content_with_toolbar: Element<'_, Message> = column![
+        toolbar_bar,
+        content,
+    ]
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .into();
+
     // Use three-panel layout for message detail view
-    let main_view: Element<'_, Message> = match state.navigation.current() {
+    let panels: Element<'_, Message> = match state.navigation.current() {
         ViewLevel::MessageDetail { .. } => {
             // Three-panel: sidebar + message list + detail
             let filter_desc = state
@@ -207,10 +225,31 @@ fn connected_view(state: &AppState) -> Element<'_, Message> {
             three_panel_layout(sidebar_element, list_content, detail_content)
         }
         _ => {
-            // Two-panel: sidebar + content
-            two_panel_layout(sidebar_element, content)
+            // Two-panel: sidebar + content (with toolbar)
+            two_panel_layout(sidebar_element, content_with_toolbar)
         }
     };
+
+    // Status bar at the bottom
+    let total_messages = state.stats.as_ref().map(|s| s.total_messages);
+    let bottom_bar = status_bar(
+        &state.connection_status,
+        &state.server_url,
+        &state.sync_accounts,
+        state.syncing_account.as_deref(),
+        total_messages,
+    );
+
+    // Main area (panels) fills available space; status bar is fixed height at bottom
+    let main_view: Element<'_, Message> = column![
+        container(panels)
+            .width(Length::Fill)
+            .height(Length::Fill),
+        bottom_bar,
+    ]
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .into();
 
     // Overlay modals if showing
     if state.compose.is_open {
